@@ -369,7 +369,7 @@ class BezierkurveGrafiken:
         # Direktes Return der Grafik
         return self.bz_plotten(kurvenpunkte)
 
-    def hole_dash_grafik(self):
+    def plotte_dash_grafik(self):
         #return dcc.Graph(figure=self.bz_grafik)
         return dcc.Graph(id='bz-graph-basis', figure=self.bz_fig)
 
@@ -415,6 +415,13 @@ class BezierkurveGrafiken:
             f"Position auf Bezierkurve (relativ zu t): {', '.join(map(str, position))}"
         ]
         return infos
+
+    def hole_bezierkurve(self):
+        t_werte = np.linspace(0, 1, 1000)
+        kurvenpunkte = self.kurve_berechnung.berechne_gesamte_bezierkurve(t_werte)
+        x, y, z = kurvenpunkte[:, 0], kurvenpunkte[:, 1], kurvenpunkte[:, 2]
+        return x, y, z
+
 
 class BezierFormeln:
     def __init__(self, bezier_curve):
@@ -554,6 +561,17 @@ class BezierAnalyse:
     def berechne_alle_normen(self, anzahl_punkte=2500):
         return self.berechne_alle_werte(BezierFormeln.normen_der_ableitungen, anzahl_punkte)
 
+    def frenet_serret(self, globales_t):
+        segment_index, lokales_t, _, segment_stuetzpunkte, _ = self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(
+            globales_t)
+
+        # Verwendung der Kontrollpunkte direkt aus bezier_kurve_berechnung
+        segment_kontrollpunkte = self.bezier_kurve_berechnung._kontrollpunkte[segment_index]
+
+        bezier_segment = KubischeBezier(segment_stuetzpunkte[0], *segment_kontrollpunkte, segment_stuetzpunkte[1])
+        bezier_formeln = BezierFormeln(bezier_segment)
+
+        return bezier_formeln.frenet_serret(lokales_t)
 
 class BezierVisualisierung:
     def __init__(self, bezier_analyse):
@@ -636,11 +654,53 @@ class BezierVisualisierung:
         )
         fig.show()
 
+
+class FrenetSerretVisualisierung:
+    def __init__(self, bezier_analyse, bezier_grafiken):
+        self.bezier_analyse = bezier_analyse
+        self.bezier_grafiken = bezier_grafiken
+        self.vektoren_groesse = 1.0  # Initialwert
+
+    def zeichne_wagon_und_tnb(self, t_wert_global):
+        # Position und TNB-Vektoren für gegebenes t berechnen
+        _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t_wert_global, BezierFormeln.frenet_serret)
+        T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
+
+        # Skalierung der TNB Vektoren
+        T *= self.vektoren_groesse
+        N *= self.vektoren_groesse
+        B *= self.vektoren_groesse
+
+        # Bezierkurve rendern
+        x_kurve, y_kurve, z_kurve = self.bezier_grafiken.hole_bezierkurve()
+
+        fig = go.Figure()
+
+        # Bezierkurve
+        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines', line=dict(color='blue', width=2),
+                                   name='Bezierkurve'))
+
+        # Wagon
+        fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers',
+                                   marker=dict(size=15, color='black'), name='Wagon an t'))
+
+        # TNB-Vektoren
+        for vector, color, name in [(T, 'red', 'Tangent'), (N, 'green', 'Normal'), (B, 'purple', 'Binormal')]:
+            fig.add_trace(go.Scatter3d(
+                x=[position[0], position[0] + vector[0]],
+                y=[position[1], position[1] + vector[1]],
+                z=[position[2], position[2] + vector[2]],
+                mode='lines',
+                line=dict(color=color),
+                name=name
+            ))
+
+        fig.update_layout(title=f"Frenet-Serret  mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.show()
+
 if __name__ == "__main__":
     # Stuetzpunkte definieren
     stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
-
-    #stuetzpunkte = [(0, 0, 0), (1, 2, 3), (3, 1, 0)]
 
     # Instanz von BezierKurveBerechnung
     bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
@@ -653,18 +713,20 @@ if __name__ == "__main__":
 
     grafiken = BezierkurveGrafiken(stuetzpunkte)
     bezier_fig = grafiken.zeichne_wagon_bei_t(t_wert_global)
-    bezier_fig.show()
+    #bezier_fig.show()
 
     infos = grafiken.hole_infos_bei_t(t_wert_global)
     print("\n".join(infos))
+
+    # --- --- ---
 
     # Grafiken generieren
     analyse = BezierAnalyse(stuetzpunkte)
     visualisierung = BezierVisualisierung(analyse)
 
-    visualisierung.plot_torsion(t_wert_global)
-    visualisierung.plot_kruemmung(t_wert_global)
-    visualisierung.plot_normen(t_wert_global)
+    #visualisierung.plot_torsion(t_wert_global)
+    #visualisierung.plot_kruemmung(t_wert_global)
+    #visualisierung.plot_normen(t_wert_global)
 
     # Torsion für t berechnen
     _, _, _, torsion = analyse.torsion_fuer_globales_t(t_wert_global)
@@ -677,3 +739,11 @@ if __name__ == "__main__":
     # Normen für t berechnen
     _, _, _, normen = analyse.normen_fuer_globales_t(t_wert_global)
     print(f"Normen bei t = {t_wert_global}: {normen}")
+
+    # --- --- ---
+
+    # Frenet-Dreibein
+    grafiken = BezierkurveGrafiken(stuetzpunkte)
+
+    fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
+    fs_visualisierung.zeichne_wagon_und_tnb(t_wert_global)
