@@ -9,7 +9,8 @@ import plotly.graph_objects as go
 import dash
 from dash import dcc
 from dash import html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+
 
 class LeseDatei:
 
@@ -665,6 +666,7 @@ class FrenetSerretVisualisierung:
         self.bezier_grafiken = bezier_grafiken
         self.vektoren_groesse = 1.0  # Initialwert
         self.alle_positionen, self.alle_T_vektoren, self.alle_N_vektoren, self.alle_B_vektoren = self.berechne_positions_vektoren()
+        self.bezier_kurve_berechnung = bezier_kurve_berechnung
 
 
     def berechne_positions_vektoren(self):
@@ -678,7 +680,7 @@ class FrenetSerretVisualisierung:
             B_vektoren: Ein Array mit den B-Vektoren.
         """
 
-        t_values = np.linspace(0, 1, 100)  # ACHTUNG WENN ERHÖHRT ODE RNICHT. GLOBALE VAR SPÄTER
+        t_values = np.linspace(0, 1, 100)
 
         achterbahn_positionen = np.zeros((len(t_values), 3))
         T_vektoren = np.zeros((len(t_values), 3))
@@ -718,7 +720,7 @@ class FrenetSerretVisualisierung:
 
         # Wagon
         fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers',
-                                   marker=dict(size=7, color='orange'), name='Wagon an t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
 
         # TNB-Vektoren
         for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalvektor'), (B, 'blue', 'Binormalvektor')]:
@@ -731,26 +733,24 @@ class FrenetSerretVisualisierung:
                 name=name
             ))
 
-        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
-                          title_x=0.5
-                          )
+        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
 
         fig.show()
 
     # Für die Animation (ähnlich wie oben; nur zwecks Perfomanz refaktorisiert)
     def initialisiere_grafik(self):
         """Initialisiert die Grafik und gibt die aktualisiert Grafik zurück."""
-        x_kurve, y_kurve, z_kurve = self.bezier_grafiken.hole_bezierkurve()
+        x_kurven_wert, y_kurven_wert, z_kurven_wert = self.bezier_grafiken.hole_bezierkurve()
 
         fig = go.Figure()
 
         # Bezierkurve
-        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines',
+        fig.add_trace(go.Scatter3d(x=x_kurven_wert, y=y_kurven_wert, z=z_kurven_wert, mode='lines',
                                    line=dict(color='blue', width=2), name='Bezierkurve'))
 
         # Platzhalter für Wagon
         fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
-                                   marker=dict(size=7, color='orange'), name='Wagon an t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
 
         # Platzhalter für TNB-Vektoren
         for color, name in [('red', 'Tangentenvektor'), ('green', 'Normalvektor'), ('blue', 'Binormalvektor')]:
@@ -765,8 +765,9 @@ class FrenetSerretVisualisierung:
 
         return fig
 
-    def aktualisiere_grafik(self, fig, t_wert_global):
-        idx = int(t_wert_global * 100)  # Da wir 100 t-Werte haben
+    def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
+        idx = int(min(t_wert_global, 0.99) * 100)  # Da wir 100 t-Werte haben
+
 
         position = self.alle_positionen[idx]
         T = self.alle_T_vektoren[idx] * self.vektoren_groesse
@@ -784,15 +785,45 @@ class FrenetSerretVisualisierung:
             fig.data[i + 2].y = [position[1], position[1] + vector[1]]
             fig.data[i + 2].z = [position[2], position[2] + vector[2]]
 
-        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}", title_x=0.5)
+        fig.update_layout(
+            title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
+            scene=dict(
+                xaxis=dict(showbackground=zeige_details, title_text="x" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
+                yaxis=dict(showbackground=zeige_details, title_text="y" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
+                zaxis=dict(showbackground=zeige_details, title_text="z" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details)
+            )
+        )
 
         return fig
 
+    def hole_infos_und_frenet_vektoren_bei_t(self, t_wert_global):
+
+        # Hole Grundinfos
+        segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
+            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
+
+        # Hole Dreibein Vektoren
+        T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
+
+        # Infos
+        infos = {
+            'Globales t': t_wert_global,
+            'Bezierkurven-Segment Index': segment_index,
+            'Lokales t': lokales_t,
+            'Position auf der Bezierkurve': position,
+            'Segment Stützpunkte': segment_stuetzpunkte,
+            'Segment Kontrollpunkte': segment_kontrollpunkte,
+            'Tangentenvektor (T)': T,
+            'Normalenvektor (N)': N,
+            'Binormalenvektor (B)': B
+        }
+
+        return infos
 
 
 if __name__ == "__main__":
     # Stuetzpunkte definieren
-    stuetzpunkte = LeseDatei().trackpunkte_einlesen('torus.csv')
+    stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
 
     # Instanz von BezierKurveBerechnung
     bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
@@ -843,17 +874,19 @@ if __name__ == "__main__":
     #fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
     #fs_visualisierung.zeichne_wagon_und_tnb_statisch(t_wert_global)
 
-    t_wert_global_frenet = 0.5
+    t_wert_global_frenet = 0.0
     grafiken = BezierkurveGrafiken(stuetzpunkte)
     fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
+    current_fig = fs_visualisierung.initialisiere_grafik()
 
-    # Erstellen Sie die Dash-App
     app = dash.Dash(__name__)
+    app.title = "MMCG (2023)"
 
     app.layout = html.Div([
+        html.H1("MMCG (2023) - Demo"),
         dcc.Graph(id='animation-graph', figure=fs_visualisierung.initialisiere_grafik()),
         dcc.Slider(
-            id='time-slider',
+            id='t-slider',
             min=0,
             max=1,
             value=t_wert_global_frenet,
@@ -861,16 +894,37 @@ if __name__ == "__main__":
             step=0.01,
             updatemode='drag'
         ),
+        dcc.Checklist(
+            options=[
+                {'label': 'Koordinatensystem und Achsen', 'value': 'KOORDINATENSYSTEM'}
+            ],
+            value=['KOORDINATENSYSTEM'],
+            id='koordinatensystem-toggle'
+        ),
+        html.Br(),
+        html.Div(id='info-text'),
+        html.Br(), html.Hr(),
     ])
 
+
     @app.callback(
-        Output('animation-graph', 'figure'),
-        [Input('time-slider', 'value')]
+        [Output('animation-graph', 'figure'),
+         Output('info-text', 'children')],
+        [Input('t-slider', 'value'),
+         Input('koordinatensystem-toggle', 'value')]
     )
-    def update_figure(value):
-        fig = fs_visualisierung.initialisiere_grafik()
-        fig = fs_visualisierung.aktualisiere_grafik(fig, value)
-        return fig
+    def update_figure(aktueller_t_wert, koordinaten_wert):
+        global aktuelle_fig
+        zeige_details = 'KOORDINATENSYSTEM' in koordinaten_wert
+        aktuelle_fig = fs_visualisierung.aktualisiere_grafik(current_fig, aktueller_t_wert, zeige_details=zeige_details)
+
+        # Hole Infos für das aktuelle t
+        infos = fs_visualisierung.hole_infos_und_frenet_vektoren_bei_t(aktueller_t_wert)
+
+        # Konvertieren Infos in eine Liste von Div-Elementen
+        info_divs = [html.Div(f"{key}: {aktueller_t_wert}") for key, aktueller_t_wert in infos.items()]
+
+        return aktuelle_fig, info_divs
 
     app.run_server(debug=True)
 
