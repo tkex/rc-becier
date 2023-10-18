@@ -63,6 +63,7 @@ class LeseDatei:
             return np.array([])
 
 
+
 class KubischeBezier:
     def __init__(self, x0, x1, x2, x3):
         """
@@ -372,7 +373,7 @@ class BezierkurveGrafiken:
         #return dcc.Graph(figure=self.bz_grafik)
         return dcc.Graph(id='bz-graph-basis', figure=self.bz_fig)
 
-    def zeichne_kugel_bei_t(self, globales_t):
+    def zeichne_wagon_bei_t(self, globales_t):
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = self.kurve_berechnung.berechne_position_fuer_globales_t(
             globales_t)
 
@@ -381,16 +382,6 @@ class BezierkurveGrafiken:
         #print(f"Segment Stützpunkte: {segment_stuetzpunkte}")
         #print(f"Segment Kontrollpunkte: {segment_kontrollpunkte}")
         #print(f"Position auf Bezierkurve (relativ zu t): {position}\n")
-
-        # Ausgabe der berechneten Informationen (Dash)
-        infos = [
-            f"Globales t: {globales_t}",
-            f"Segment Index: {segment_index}",
-            # f"Lokales t: {lokales_t:.2f}",
-            f"Segment Stützpunkte: {', '.join(map(str, segment_stuetzpunkte))}",
-            f"Segment Kontrollpunkte: {', '.join(map(str, segment_kontrollpunkte))}",
-            f"Position auf Bezierkurve (relativ zu t): {', '.join(map(str, position))}"
-        ]
 
         # Füge der Kugel zur gespeicherten Grafik hinzu
         wagon_spur = go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]],
@@ -411,8 +402,19 @@ class BezierkurveGrafiken:
         # ... und aktualisiere den Index
         self.wagon_spur_index = len(self.bz_fig.data) - 1
 
-        return self.bz_fig, infos
+        return self.bz_fig
 
+    def hole_infos_bei_t(self, globales_t):
+        segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = self.kurve_berechnung.berechne_position_fuer_globales_t(
+            globales_t)
+        infos = [
+            f"Globales t: {globales_t}",
+            f"Segment Index: {segment_index}",
+            f"Segment Stützpunkte: {', '.join(map(str, segment_stuetzpunkte))}",
+            f"Segment Kontrollpunkte: {', '.join(map(str, segment_kontrollpunkte))}",
+            f"Position auf Bezierkurve (relativ zu t): {', '.join(map(str, position))}"
+        ]
+        return infos
 
 class BezierFormeln:
     def __init__(self, bezier_curve):
@@ -574,6 +576,17 @@ if __name__ == "__main__":
     # Kontrollpunkte berechnen
     kontrollpunkte, _, _ = bezier_kurve_berechnung.berechne_kontrollpunkte()
 
+    # Bezierkurve anzeigen
+    t_wert_global = 0.5
+
+    grafiken = BezierkurveGrafiken(stuetzpunkte)
+    bezier_fig = grafiken.zeichne_wagon_bei_t(t_wert_global)
+    bezier_fig.show()
+
+    infos = grafiken.hole_infos_bei_t(t_wert_global)
+    print("\n".join(infos))
+
+    # Grafiken generieren
     analyse = BezierAnalyse(stuetzpunkte)
     visualisierung = BezierVisualisierung(analyse)
 
