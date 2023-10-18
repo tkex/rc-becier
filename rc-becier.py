@@ -664,6 +664,8 @@ class FrenetSerretVisualisierung:
         self.bezier_analyse = bezier_analyse
         self.bezier_grafiken = bezier_grafiken
         self.vektoren_groesse = 1.0  # Initialwert
+        self.alle_positionen, self.alle_T_vektoren, self.alle_N_vektoren, self.alle_B_vektoren = self.berechne_positions_vektoren()
+
 
     def berechne_positions_vektoren(self):
         """
@@ -695,7 +697,7 @@ class FrenetSerretVisualisierung:
 
         return achterbahn_positionen, T_vektoren, N_vektoren, B_vektoren
 
-    def zeichne_wagon_und_tnb(self, t_wert_global):
+    def zeichne_wagon_und_tnb_statisch(self, t_wert_global):
         # Position und TNB-Vektoren für gegebenes t berechnen
         _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t_wert_global, BezierFormeln.frenet_serret)
         T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
@@ -716,28 +718,81 @@ class FrenetSerretVisualisierung:
 
         # Wagon
         fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers',
-                                   marker=dict(size=15, color='orange'), name='Wagon an t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon an t'))
 
         # TNB-Vektoren
-        for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalvektor'), (B, 'purple', 'Binormal')]:
+        for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalvektor'), (B, 'blue', 'Binormalvektor')]:
             fig.add_trace(go.Scatter3d(
                 x=[position[0], position[0] + vector[0]],
                 y=[position[1], position[1] + vector[1]],
                 z=[position[2], position[2] + vector[2]],
                 mode='lines',
-                line=dict(color=color),
+                line=dict(color=color, width=6),
                 name=name
             ))
 
-        fig.update_layout(title=f"Frenet-Serret  mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
+                          title_x=0.5
+                          )
 
         fig.show()
+
+    # Für die Animation (ähnlich wie oben; nur zwecks Perfomanz refaktorisiert)
+    def initialisiere_grafik(self):
+        """Initialisiert die Grafik und gibt die aktualisiert Grafik zurück."""
+        x_kurve, y_kurve, z_kurve = self.bezier_grafiken.hole_bezierkurve()
+
+        fig = go.Figure()
+
+        # Bezierkurve
+        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines',
+                                   line=dict(color='blue', width=2), name='Bezierkurve'))
+
+        # Platzhalter für Wagon
+        fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
+                                   marker=dict(size=7, color='orange'), name='Wagon an t'))
+
+        # Platzhalter für TNB-Vektoren
+        for color, name in [('red', 'Tangentenvektor'), ('green', 'Normalvektor'), ('blue', 'Binormalvektor')]:
+            fig.add_trace(go.Scatter3d(
+                x=[0, 0],
+                y=[0, 0],
+                z=[0, 0],
+                mode='lines',
+                line=dict(color=color, width=6),
+                name=name
+            ))
+
+        return fig
+
+    def aktualisiere_grafik(self, fig, t_wert_global):
+        idx = int(t_wert_global * 100)  # Da wir 100 t-Werte haben
+
+        position = self.alle_positionen[idx]
+        T = self.alle_T_vektoren[idx] * self.vektoren_groesse
+        N = self.alle_N_vektoren[idx] * self.vektoren_groesse
+        B = self.alle_B_vektoren[idx] * self.vektoren_groesse
+
+        # Wagon
+        fig.data[1].x = [position[0]]
+        fig.data[1].y = [position[1]]
+        fig.data[1].z = [position[2]]
+
+        # TNB-Vektoren aktualisieren
+        for i, vector in enumerate([T, N, B]):
+            fig.data[i + 2].x = [position[0], position[0] + vector[0]]
+            fig.data[i + 2].y = [position[1], position[1] + vector[1]]
+            fig.data[i + 2].z = [position[2], position[2] + vector[2]]
+
+        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}", title_x=0.5)
+
+        return fig
 
 
 
 if __name__ == "__main__":
     # Stuetzpunkte definieren
-    stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
+    stuetzpunkte = LeseDatei().trackpunkte_einlesen('torus.csv')
 
     # Instanz von BezierKurveBerechnung
     bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
@@ -748,16 +803,20 @@ if __name__ == "__main__":
     # Bezierkurve anzeigen
     t_wert_global = 0.5
 
+
+
+    # Bezierkurve bei t anzeigen mit Wagon (statisch)
     grafiken = BezierkurveGrafiken(stuetzpunkte)
     bezier_fig = grafiken.zeichne_wagon_bei_t(t_wert_global)
     #bezier_fig.show()
 
-    infos = grafiken.hole_infos_bei_t(t_wert_global)
-    print("\n".join(infos))
+    #infos = grafiken.hole_infos_bei_t(t_wert_global)
+    #print("\n".join(infos))
+
+
 
     # --- --- ---
-
-    # Grafiken generieren
+    # Analyse-Grafiken generieren
     analyse = BezierAnalyse(stuetzpunkte)
     visualisierung = BezierVisualisierung(analyse)
 
@@ -766,21 +825,53 @@ if __name__ == "__main__":
     #visualisierung.plot_normen(t_wert_global)
 
     # Torsion für t berechnen
-    _, _, _, torsion = analyse.torsion_fuer_globales_t(t_wert_global)
-    print(f"\nTorsion bei t = {t_wert_global}: {torsion}")
+    #_, _, _, torsion = analyse.torsion_fuer_globales_t(t_wert_global)
+    #print(f"\nTorsion bei t = {t_wert_global}: {torsion}")
 
     # Krümmung für t berechnen
-    _, _, _, kruemmung = analyse.kruemmung_fuer_globales_t(t_wert_global)
-    print(f"Krümmung bei t = {t_wert_global}: {kruemmung}")
+    #_, _, _, kruemmung = analyse.kruemmung_fuer_globales_t(t_wert_global)
+    #print(f"Krümmung bei t = {t_wert_global}: {kruemmung}")
 
     # Normen für t berechnen
-    _, _, _, normen = analyse.normen_fuer_globales_t(t_wert_global)
-    print(f"Normen bei t = {t_wert_global}: {normen}")
+    #_, _, _, normen = analyse.normen_fuer_globales_t(t_wert_global)
+    #print(f"Normen bei t = {t_wert_global}: {normen}")
 
     # --- --- ---
 
     # Frenet-Dreibein
+    #grafiken = BezierkurveGrafiken(stuetzpunkte)
+    #fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
+    #fs_visualisierung.zeichne_wagon_und_tnb_statisch(t_wert_global)
+
+    t_wert_global_frenet = 0.5
     grafiken = BezierkurveGrafiken(stuetzpunkte)
     fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
-    fs_visualisierung.zeichne_wagon_und_tnb(t_wert_global)
+
+    # Erstellen Sie die Dash-App
+    app = dash.Dash(__name__)
+
+    app.layout = html.Div([
+        dcc.Graph(id='animation-graph', figure=fs_visualisierung.initialisiere_grafik()),
+        dcc.Slider(
+            id='time-slider',
+            min=0,
+            max=1,
+            value=t_wert_global_frenet,
+            marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
+            step=0.01,
+            updatemode='drag'
+        ),
+    ])
+
+    @app.callback(
+        Output('animation-graph', 'figure'),
+        [Input('time-slider', 'value')]
+    )
+    def update_figure(value):
+        fig = fs_visualisierung.initialisiere_grafik()
+        fig = fs_visualisierung.aktualisiere_grafik(fig, value)
+        return fig
+
+    app.run_server(debug=True)
+
 
