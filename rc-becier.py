@@ -576,9 +576,9 @@ class BezierVisualisierung:
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Torsion der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Torsion an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.4f}",
+            title=f"Torsion der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Torsion an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
-            yaxis_title="Torsion"
+            yaxis_title="Torsion τ(t)"
         )
         fig.show()
 
@@ -599,9 +599,9 @@ class BezierVisualisierung:
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Krümmung der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Krümmung an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.4f}",
+            title=f"Krümmung der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Krümmung an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
-            yaxis_title="Krümmung"
+            yaxis_title="Krümmung κ(t)"
         )
         fig.show()
 
@@ -628,9 +628,11 @@ class BezierVisualisierung:
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Normen an Stelle t = {t_wert_global:.2f} ist {berechneter_wert}",
+            title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>"
+                  f"Berechneter Wert der Normen an Stelle t = {t_wert_global:.2f} ist für "
+                  f"Tempo: {berechneter_wert[0]:.2f}, Geschwindigkeit: {berechneter_wert[1]:.2f} und Ruck: {berechneter_wert[2]:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
-            yaxis_title="Normen"
+            yaxis_title="Normen der Beträge"
         )
         fig.show()
 
