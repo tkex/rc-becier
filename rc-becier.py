@@ -519,6 +519,39 @@ class BezierFormeln:
 
         return T, N, B
 
+    def paralell_rahmen_bishop(self, t):
+        bez1_abl_t, bez2_abl_t, _ = self.bezier.bezier_ableitungen(t)
+
+        # Tangentenvektor (T)
+        T = bez1_abl_t / np.linalg.norm(bez1_abl_t)
+
+        # Einheitsvektor A
+        A = np.array([0, 0, 1])
+
+        # Berechne alpha
+        cos_alpha = np.dot(T, A)
+        sin_alpha = np.linalg.norm(np.cross(T, A))
+
+        # Berechne nu_1 und nu_2
+        nu_1 = np.cross(T, A) / sin_alpha
+        nu_2 = np.cross(T, nu_1) / sin_alpha
+
+        # Berechne theta'
+        theta_prime = -cos_alpha / sin_alpha ** 2 * np.dot(np.cross(T, bez1_abl_t), A)
+
+        # Für die Demonstration nehmen wir an, dass theta konstant ist (dies sollte in einer realen Anwendung integriert werden)
+        theta = np.arctan2(np.dot(nu_2, A), np.dot(nu_1, A))
+
+        # Berechne N und B
+        N = np.cos(theta) * nu_1 + np.sin(theta) * nu_2
+        B = np.cross(T, N)
+
+        # Normiere N und B
+        N /= np.linalg.norm(N)
+        B /= np.linalg.norm(B)
+
+        return T, N, B
+
 class BezierAnalyse:
     def __init__(self, stuetzpunkte):
         self.stuetzpunkte = stuetzpunkte
@@ -577,6 +610,8 @@ class BezierAnalyse:
         bezier_formeln = BezierFormeln(bezier_segment)
 
         return bezier_formeln.frenet_serret(lokales_t)
+
+    def paralell_rahmen(self, globales_):
 
 class BezierVisualisierung:
     def __init__(self, bezier_analyse):
