@@ -463,3 +463,18 @@ class BezierFormeln:
         norm_bez3_abl_t = np.linalg.norm(bez3_abl_t)
 
         return norm_bez1_abl_t, norm_bez2_abl_t, norm_bez3_abl_t
+
+    def frenet_serret(self, t):
+        bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
+
+        # Tangentenvektor (T)
+        T = bez1_abl_t / np.linalg.norm(bez1_abl_t)
+
+        # Normalenvektor (N)
+        kreuz_prod = np.cross(bez2_abl_t, bez1_abl_t)
+        N = np.cross(bez1_abl_t, kreuz_prod) / (np.linalg.norm(bez1_abl_t) * np.linalg.norm(kreuz_prod))
+
+        # Binormalenvektor (B)
+        B = np.cross(T, N)
+
+        return T, N, B
