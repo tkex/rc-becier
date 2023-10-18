@@ -478,3 +478,31 @@ class BezierFormeln:
         B = np.cross(T, N)
 
         return T, N, B
+
+class BezierAnalyse:
+    def __init__(self, stuetzpunkte):
+        self.stuetzpunkte = stuetzpunkte
+        self.bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
+
+    def berechne_fuer_globales_t(self, globales_t, funktion):
+        segment_index, lokales_t, _, segment_stuetzpunkte, position = self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(globales_t)
+
+        #Verwendendung der Kontrollpunkte direkt aus bezier_kurve_berechnung
+        segment_kontrollpunkte = self.bezier_kurve_berechnung._kontrollpunkte[segment_index]
+
+        bezier_segment = KubischeBezier(segment_stuetzpunkte[0], *segment_kontrollpunkte, segment_stuetzpunkte[1])
+        bezier_formeln = BezierFormeln(bezier_segment)
+
+        wert = funktion(bezier_formeln, lokales_t)
+        return segment_index, lokales_t, position, wert
+
+    # Funktionen um Berechnung für bestimmtes globales t zu bestimmen
+    def torsion_fuer_globales_t(self, globales_t):
+        return self.berechne_fuer_globales_t(globales_t, BezierFormeln.torsion_det_formel)
+
+    def kruemmung_fuer_globales_t(self, globales_t):
+        return self.berechne_fuer_globales_t(globales_t, BezierFormeln.kruemmung)
+
+    def normen_fuer_globales_t(self, globales_t):
+        return self.berechne_fuer_globales_t(globales_t, BezierFormeln.normen_der_ableitungen)
+
