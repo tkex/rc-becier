@@ -526,3 +526,57 @@ class BezierAnalyse:
     def berechne_alle_normen(self, anzahl_punkte=1000):
         return self.berechne_alle_werte(BezierFormeln.normen_der_ableitungen, anzahl_punkte)
 
+class BezierVisualisierung:
+    def __init__(self, bezier_analyse):
+        self.bezier_analyse = bezier_analyse
+
+    def plot_torsion(self, anzahl_punkte=1000):
+        werte = self.bezier_analyse.berechne_alle_torsionswerte(anzahl_punkte)
+        torsionswerte = [wert[3] for wert in werte]
+        t_werte = np.linspace(0, 1, anzahl_punkte)
+        fig = go.Figure(data=go.Scatter(x=t_werte, y=torsionswerte, mode='lines'))
+        fig.update_layout(title="Torsion der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Torsion")
+        fig.show()
+
+    def plot_kruemmung(self, anzahl_punkte=1000):
+        werte = self.bezier_analyse.berechne_alle_kruemmungswerte(anzahl_punkte)
+        kruemmungswerte = [wert[3] for wert in werte]
+        t_werte = np.linspace(0, 1, anzahl_punkte)
+        fig = go.Figure(data=go.Scatter(x=t_werte, y=kruemmungswerte, mode='lines'))
+        fig.update_layout(title="Krümmung der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Krümmung")
+        fig.show()
+
+    def plot_normen(self, anzahl_punkte=1000):
+        werte = self.bezier_analyse.berechne_alle_normen(anzahl_punkte)
+        t_werte = np.linspace(0, 1, anzahl_punkte)
+
+        normen_B1_t = [wert[3][0] for wert in werte]
+        normen_B2_t = [wert[3][1] for wert in werte]
+        normen_B3_t = [wert[3][2] for wert in werte]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo (1. Ableitung)'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Geschwindigkeit (2. Ableitung)'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck (3. Ableitung)'))
+
+        fig.update_layout(title="Normen der Ableitungen der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Normen")
+        fig.show()
+
+if __name__ == "__main__":
+    # Stuetzpunkte definieren
+    stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
+
+    #stuetzpunkte = [(0, 0, 0), (1, 2, 3), (3, 1, 0)]
+
+    # Instanz von BezierKurveBerechnung
+    bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
+
+    # Kontrollpunkte berechnen
+    kontrollpunkte, _, _ = bezier_kurve_berechnung.berechne_kontrollpunkte()
+
+    analyse = BezierAnalyse(stuetzpunkte)
+    visualisierung = BezierVisualisierung(analyse)
+
+    visualisierung.plot_torsion()
+    visualisierung.plot_kruemmung()
+    visualisierung.plot_normen()
