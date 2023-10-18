@@ -611,7 +611,17 @@ class BezierAnalyse:
 
         return bezier_formeln.frenet_serret(lokales_t)
 
-    def paralell_rahmen(self, globales_):
+    def paralell_rahmen_bishop(self, globales_t):
+        segment_index, lokales_t, _, segment_stuetzpunkte, _ = self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(
+            globales_t)
+
+        # Verwendung der Kontrollpunkte direkt aus bezier_kurve_berechnung
+        segment_kontrollpunkte = self.bezier_kurve_berechnung._kontrollpunkte[segment_index]
+
+        bezier_segment = KubischeBezier(segment_stuetzpunkte[0], *segment_kontrollpunkte, segment_stuetzpunkte[1])
+        bezier_formeln = BezierFormeln(bezier_segment)
+
+        return bezier_formeln.paralell_rahmen_bishop(lokales_t)
 
 class BezierVisualisierung:
     def __init__(self, bezier_analyse):
