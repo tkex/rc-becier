@@ -412,3 +412,54 @@ class BezierkurveGrafiken:
         self.wagon_spur_index = len(self.bz_fig.data) - 1
 
         return self.bz_fig, infos
+
+
+class BezierFormeln:
+    def __init__(self, bezier_curve):
+        self.bezier = bezier_curve
+
+    def kruemmung(self, t):
+        bez1_abl_t, bez2_abl_t, _ = self.bezier.bezier_ableitungen(t)
+
+        # Berechnung des Kreuzprodukts
+        kreuz_prod = np.cross(bez1_abl_t, bez2_abl_t)
+
+        # Berechnung der Normen
+        norm_kreuz_prod = np.linalg.norm(kreuz_prod)
+        norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
+
+        # Berechnung der Krümmung
+        kruemmung = norm_kreuz_prod / (norm_bez1_abl_t ** 3)
+
+        return kruemmung
+
+    def torsion_det_formel(self, t):
+        bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
+
+        # Berechnung des Determinanten der Ableitungen
+        det_wert = np.linalg.det(np.vstack((bez1_abl_t, bez2_abl_t, bez3_abl_t)))
+
+        # Berechnung des Kreuzprodukts von bez1_abl_t und bez2_abl_t
+        kreuz_prod = np.cross(bez1_abl_t, bez2_abl_t)
+
+        # Betrag des Kreuzprodukts von bez1_abl_t und bez2_abl_t
+        kreuz_prod_betrag = np.linalg.norm(kreuz_prod)
+
+        # Überprüfen, ob der Nenner nahe null ist
+        if kreuz_prod_betrag < 1e-10:
+            return 0.0  # Setze Torsion auf 0, wenn der Nenner zu klein ist
+
+        # Berechnung der Torsion
+        torsion = det_wert / (kreuz_prod_betrag ** 2)
+
+        return torsion
+
+    def normen_der_ableitungen(self, t):
+        bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
+
+        # Berechnung der Normen
+        norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
+        norm_bez2_abl_t = np.linalg.norm(bez2_abl_t)
+        norm_bez3_abl_t = np.linalg.norm(bez3_abl_t)
+
+        return norm_bez1_abl_t, norm_bez2_abl_t, norm_bez3_abl_t
