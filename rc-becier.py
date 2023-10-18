@@ -506,3 +506,23 @@ class BezierAnalyse:
     def normen_fuer_globales_t(self, globales_t):
         return self.berechne_fuer_globales_t(globales_t, BezierFormeln.normen_der_ableitungen)
 
+    # Funktionen um Berechnungen für alle Punkte auf der Bezierkurve zu bestimmen
+    def berechne_alle_werte(self, funktion, anzahl_punkte=1000):
+        t_werte = np.linspace(0, 1, anzahl_punkte)
+        werte = []
+
+        for t in t_werte:
+            wert = self.berechne_fuer_globales_t(t, funktion)
+            werte.append(wert)
+
+        return werte
+
+    def berechne_alle_torsionswerte(self, anzahl_punkte=1000):
+        return self.berechne_alle_werte(BezierFormeln.torsion_det_formel, anzahl_punkte)
+
+    def berechne_alle_kruemmungswerte(self, anzahl_punkte=1000):
+        return self.berechne_alle_werte(BezierFormeln.kruemmung, anzahl_punkte)
+
+    def berechne_alle_normen(self, anzahl_punkte=1000):
+        return self.berechne_alle_werte(BezierFormeln.normen_der_ableitungen, anzahl_punkte)
+
