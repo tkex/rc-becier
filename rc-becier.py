@@ -6,6 +6,10 @@ Projektbeschreibung (TODO)
 import numpy as np
 import plotly.graph_objects as go
 
+import dash
+from dash import dcc
+from dash import html
+from dash.dependencies import Input, Output
 
 class LeseDatei:
 
@@ -385,7 +389,7 @@ class BezierkurveGrafiken:
 
         # Füge der Kugel zur gespeicherten Grafik hinzu
         wagon_spur = go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]],
-                                  mode='markers', marker=dict(size=10, color='black'),
+                                  mode='markers', marker=dict(size=10, color='orange'),
                                   name='Globale t-Wert Position')
 
         # Wenn es bereits eine Spur für den Ball gibt, entfernen
@@ -661,6 +665,36 @@ class FrenetSerretVisualisierung:
         self.bezier_grafiken = bezier_grafiken
         self.vektoren_groesse = 1.0  # Initialwert
 
+    def berechne_positions_vektoren(self):
+        """
+        Berechnet die Positionen und TNB-Vektoren für alle t-Werte von 0 bis 1.
+
+        Rückgabe:
+            achterbahn_positionen: Ein Array mit den Positionen der Kugel.
+            T_vektoren: Ein Array mit den T-Vektoren.
+            N_vektoren: Ein Array mit den N-Vektoren.
+            B_vektoren: Ein Array mit den B-Vektoren.
+        """
+
+        t_values = np.linspace(0, 1, 100)  # ACHTUNG WENN ERHÖHRT ODE RNICHT. GLOBALE VAR SPÄTER
+
+        achterbahn_positionen = np.zeros((len(t_values), 3))
+        T_vektoren = np.zeros((len(t_values), 3))
+        N_vektoren = np.zeros((len(t_values), 3))
+        B_vektoren = np.zeros((len(t_values), 3))
+
+        for idx, t in enumerate(t_values):
+            # Berechnungen
+            _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t, BezierFormeln.frenet_serret)
+            T, N, B = self.bezier_analyse.frenet_serret(t)
+
+            achterbahn_positionen[idx] = position
+            T_vektoren[idx] = T
+            N_vektoren[idx] = N
+            B_vektoren[idx] = B
+
+        return achterbahn_positionen, T_vektoren, N_vektoren, B_vektoren
+
     def zeichne_wagon_und_tnb(self, t_wert_global):
         # Position und TNB-Vektoren für gegebenes t berechnen
         _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t_wert_global, BezierFormeln.frenet_serret)
@@ -682,10 +716,10 @@ class FrenetSerretVisualisierung:
 
         # Wagon
         fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers',
-                                   marker=dict(size=15, color='black'), name='Wagon an t'))
+                                   marker=dict(size=15, color='orange'), name='Wagon an t'))
 
         # TNB-Vektoren
-        for vector, color, name in [(T, 'red', 'Tangent'), (N, 'green', 'Normal'), (B, 'purple', 'Binormal')]:
+        for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalvektor'), (B, 'purple', 'Binormal')]:
             fig.add_trace(go.Scatter3d(
                 x=[position[0], position[0] + vector[0]],
                 y=[position[1], position[1] + vector[1]],
@@ -696,7 +730,10 @@ class FrenetSerretVisualisierung:
             ))
 
         fig.update_layout(title=f"Frenet-Serret  mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+
         fig.show()
+
+
 
 if __name__ == "__main__":
     # Stuetzpunkte definieren
@@ -744,6 +781,6 @@ if __name__ == "__main__":
 
     # Frenet-Dreibein
     grafiken = BezierkurveGrafiken(stuetzpunkte)
-
     fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
     fs_visualisierung.zeichne_wagon_und_tnb(t_wert_global)
+
