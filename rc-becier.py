@@ -436,6 +436,7 @@ class BezierFormeln:
         return kruemmung
 
     def torsion_det_formel(self, t):
+        '''
         bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
 
         # Berechnung des Determinanten der Ableitungen
@@ -453,6 +454,31 @@ class BezierFormeln:
 
         # Berechnung der Torsion
         torsion = det_wert / (kreuz_prod_betrag ** 2)
+
+        return torsion
+        '''
+
+        #
+        # Alternative Torsion-Formel zwecks Vergleich zur Determinanten-Formel:
+        # \tau = \frac{(\dot{\vec{r}} \times \ddot{\vec{r}}) \cdot \dddot{\vec{r}}}{|\dot{\vec{r}} \times \ddot{\vec{r}}|^2}
+
+        bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
+
+        # Berechnung des Kreuzprodukts von bez1_abl_t und bez2_abl_t
+        kreuz_prod = np.cross(bez1_abl_t, bez2_abl_t)
+
+        # Betrag des Kreuzprodukts von bez1_abl_t und bez2_abl_t
+        kreuz_prod_betrag = np.linalg.norm(kreuz_prod)
+
+        # Berechnung des Skalarprodukts von kreuz_prod und bez3_abl_t
+        skalar_prod = np.dot(kreuz_prod, bez3_abl_t)
+
+        # Überprüfen, ob der Nenner nahe null ist
+        if kreuz_prod_betrag < 1e-10:
+            return 0.0  # Setze Torsion auf 0, wenn der Nenner zu klein ist
+
+        # Berechnung der Torsion nach der gegebenen Formel
+        torsion = skalar_prod / (kreuz_prod_betrag ** 2)
 
         return torsion
 
@@ -509,7 +535,7 @@ class BezierAnalyse:
         return self.berechne_fuer_globales_t(globales_t, BezierFormeln.normen_der_ableitungen)
 
     # Funktionen um Berechnungen für alle Punkte auf der Bezierkurve zu bestimmen
-    def berechne_alle_werte(self, funktion, anzahl_punkte=1000):
+    def berechne_alle_werte(self, funktion, anzahl_punkte=2500):
         t_werte = np.linspace(0, 1, anzahl_punkte)
         werte = []
 
@@ -519,36 +545,67 @@ class BezierAnalyse:
 
         return werte
 
-    def berechne_alle_torsionswerte(self, anzahl_punkte=1000):
+    def berechne_alle_torsionswerte(self, anzahl_punkte=2500):
         return self.berechne_alle_werte(BezierFormeln.torsion_det_formel, anzahl_punkte)
 
-    def berechne_alle_kruemmungswerte(self, anzahl_punkte=1000):
+    def berechne_alle_kruemmungswerte(self, anzahl_punkte=2500):
         return self.berechne_alle_werte(BezierFormeln.kruemmung, anzahl_punkte)
 
-    def berechne_alle_normen(self, anzahl_punkte=1000):
+    def berechne_alle_normen(self, anzahl_punkte=2500):
         return self.berechne_alle_werte(BezierFormeln.normen_der_ableitungen, anzahl_punkte)
+
 
 class BezierVisualisierung:
     def __init__(self, bezier_analyse):
         self.bezier_analyse = bezier_analyse
 
-    def plot_torsion(self, anzahl_punkte=1000):
+    def plot_torsion(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_torsionswerte(anzahl_punkte)
         torsionswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
-        fig = go.Figure(data=go.Scatter(x=t_werte, y=torsionswerte, mode='lines'))
-        fig.update_layout(title="Torsion der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Torsion")
+
+        berechneter_wert = self.bezier_analyse.torsion_fuer_globales_t(t_wert_global)[3]
+
+        fig = go.Figure(data=go.Scatter(x=t_werte, y=torsionswerte, mode='lines', line=dict(color='blue')))
+        fig.add_shape(
+            type="line",
+            x0=t_wert_global,
+            x1=t_wert_global,
+            y0=min(torsionswerte),
+            y1=max(torsionswerte),
+            line=dict(color="green", width=2)
+        )
+        fig.update_layout(
+            title=f"Torsion der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Torsion an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.4f}",
+            xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
+            yaxis_title="Torsion"
+        )
         fig.show()
 
-    def plot_kruemmung(self, anzahl_punkte=1000):
+    def plot_kruemmung(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_kruemmungswerte(anzahl_punkte)
         kruemmungswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
-        fig = go.Figure(data=go.Scatter(x=t_werte, y=kruemmungswerte, mode='lines'))
-        fig.update_layout(title="Krümmung der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Krümmung")
+
+        berechneter_wert = self.bezier_analyse.kruemmung_fuer_globales_t(t_wert_global)[3]
+
+        fig = go.Figure(data=go.Scatter(x=t_werte, y=kruemmungswerte, mode='lines', line=dict(color='red')))
+        fig.add_shape(
+            type="line",
+            x0=t_wert_global,
+            x1=t_wert_global,
+            y0=min(kruemmungswerte),
+            y1=max(kruemmungswerte),
+            line=dict(color="green", width=2)
+        )
+        fig.update_layout(
+            title=f"Krümmung der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Krümmung an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.4f}",
+            xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
+            yaxis_title="Krümmung"
+        )
         fig.show()
 
-    def plot_normen(self, anzahl_punkte=1000):
+    def plot_normen(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_normen(anzahl_punkte)
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
@@ -556,12 +613,25 @@ class BezierVisualisierung:
         normen_B2_t = [wert[3][1] for wert in werte]
         normen_B3_t = [wert[3][2] for wert in werte]
 
+        berechneter_wert = self.bezier_analyse.normen_fuer_globales_t(t_wert_global)[3]
+
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo (1. Ableitung)'))
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Geschwindigkeit (2. Ableitung)'))
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck (3. Ableitung)'))
-
-        fig.update_layout(title="Normen der Ableitungen der gesamten Bézierkurve", xaxis_title="Globales t", yaxis_title="Normen")
+        fig.add_shape(
+            type="line",
+            x0=t_wert_global,
+            x1=t_wert_global,
+            y0=0,
+            y1=max(max(normen_B1_t), max(normen_B2_t), max(normen_B3_t)),
+            line=dict(color="green", width=2)
+        )
+        fig.update_layout(
+            title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Normen an Stelle t = {t_wert_global:.2f} ist {berechneter_wert}",
+            xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
+            yaxis_title="Normen"
+        )
         fig.show()
 
 if __name__ == "__main__":
@@ -590,6 +660,18 @@ if __name__ == "__main__":
     analyse = BezierAnalyse(stuetzpunkte)
     visualisierung = BezierVisualisierung(analyse)
 
-    visualisierung.plot_torsion()
-    visualisierung.plot_kruemmung()
-    visualisierung.plot_normen()
+    visualisierung.plot_torsion(t_wert_global)
+    visualisierung.plot_kruemmung(t_wert_global)
+    visualisierung.plot_normen(t_wert_global)
+
+    # Torsion für t berechnen
+    _, _, _, torsion = analyse.torsion_fuer_globales_t(t_wert_global)
+    print(f"\nTorsion bei t = {t_wert_global}: {torsion}")
+
+    # Krümmung für t berechnen
+    _, _, _, kruemmung = analyse.kruemmung_fuer_globales_t(t_wert_global)
+    print(f"Krümmung bei t = {t_wert_global}: {kruemmung}")
+
+    # Normen für t berechnen
+    _, _, _, normen = analyse.normen_fuer_globales_t(t_wert_global)
+    print(f"Normen bei t = {t_wert_global}: {normen}")
