@@ -417,7 +417,7 @@ class BezierkurveGrafiken:
         # Füge der Kugel zur gespeicherten Grafik hinzu
         wagon_spur = go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]],
                                   mode='markers', marker=dict(size=10, color='orange'),
-                                  name='Globale t-Wert Position')
+                                  name='Wagon relativ zum t-Wert')
 
         # Wenn es bereits eine Spur für den Ball gibt, entfernen
         if self.wagon_spur_index is not None:
@@ -515,9 +515,9 @@ class BezierFormeln:
         # Betrag des Kreuzprodukts von bez1_abl_t und bez2_abl_t
         kreuz_prod_betrag = np.linalg.norm(kreuz_prod)
 
-        # Überprüfen, ob der Nenner nahe null ist
+        # Überprüfen, ob der Nenner fast null ist
         if kreuz_prod_betrag < 1e-10:
-            return 0.0  # Setze Torsion auf 0, wenn der Nenner zu klein ist
+            return 0.0
 
         # Berechnung der Torsion
         torsion = det_wert / (kreuz_prod_betrag ** 2)
@@ -538,9 +538,9 @@ class BezierFormeln:
         # Berechnung des Skalarprodukts von kreuz_prod und bez3_abl_t
         skalar_prod = np.dot(kreuz_prod, bez3_abl_t)
 
-        # Überprüfen, ob der Nenner nahe null ist
+        # Überprüfen, ob der Nenner fast null ist
         if kreuz_prod_betrag < 1e-10:
-            # Torsion auf 0, wenn Nenner zu klein sein sollte
+            # Torsion 0, wenn Nenner zu klein sein sollte
             return 0.0
 
         # Berechnung der Torsion nach der gegebenen Formel
@@ -582,8 +582,8 @@ class BezierFormeln:
         von der Antwort von Ted Shifrin
 
         Im Gegensatz zum Frenet-Serret (Dreibein) wird hier Wert auf Paralleltransport gelegt,
-        dh. die Torsion wird weitesgehend ignoriert und hat keine 'komischen' Drehungen in der Bewegung entlang
-        der Bézierkurve sofern eine hohe Torsion auftaucht.
+        dh. die Torsion wird weitesgehend ignoriert und resultiert nicht in 'komischen' Drehungen innerhalb derBewegung
+        entlang der Bézierkurve sofern eine hohe Torsion auftaucht.
         """
 
         # Erste und zweite Ableitungen an t berechnen
@@ -615,6 +615,13 @@ class BezierFormeln:
         return T, N, B
 
 class BezierAnalyse:
+    """
+    Analyse-Klasse die entkoppelt zu den obigen Formeln ist.
+
+    Innerhalb dieser Klasse werden alle Methoden zwecks unterschiedlichen Berechnungen definiert, welche auf die
+    obigen Formeln basieren und die Berechnungen relativ zum globalen t zurückgeben.
+    """
+
     def __init__(self, stuetzpunkte):
         self.stuetzpunkte = stuetzpunkte
         self.bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
@@ -829,7 +836,7 @@ class FrenetDreibeinVisualisierung:
 
         # Wagon
         fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers',
-                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon relativ zum t-Wert'))
 
         # TNB-Vektoren
         for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalvektor'), (B, 'blue', 'Binormalvektor')]:
@@ -859,7 +866,7 @@ class FrenetDreibeinVisualisierung:
 
         # Platzhalter für Wagon
         fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
-                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon relativ zum t-Wert'))
 
         # Platzhalter für TNB-Vektoren
         for color, name in [('red', 'Tangentenvektor'), ('green', 'Normalvektor'), ('blue', 'Binormalvektor')]:
@@ -968,7 +975,7 @@ class ParallelRahmenVisualisierung:
         fig = go.Figure()
 
         fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines', line=dict(color='blue', width=2), name='Bézierkurve'))
-        fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers', marker=dict(size=7, color='orange'), name='Wagon zu t'))
+        fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers', marker=dict(size=7, color='orange'), name='Wagon relativ zum t-Wert'))
 
         for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalenvektor'), (B, 'blue', 'Binormalvektor')]:
             fig.add_trace(go.Scatter3d(x=[position[0], position[0] + vector[0]], y=[position[1], position[1] + vector[1]], z=[position[2], position[2] + vector[2]], mode='lines', line=dict(color=color, width=6), name=name))
@@ -987,7 +994,7 @@ class ParallelRahmenVisualisierung:
 
         # Platzhalter für Wagon
         fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
-                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
+                                   marker=dict(size=7, color='orange'), name='Wagon relativ zum t-Wert'))
 
         # Platzhalter für TNB-Vektoren
         for color, name in [('red', 'Tangentenvektor'), ('green', 'Normalenvektor'), ('blue', 'Binormalvektor')]:
@@ -1055,6 +1062,47 @@ class ParallelRahmenVisualisierung:
 
         return infos
 
+class TorusKnot:
+    """
+    Berechnung von Torusknoten für kubische Bezierkurven unter Berücksichtigung
+    der Skalierung von t-Werten im Bereich t=0 bis t=1 auf 0 bis 2pi.
+    """
+    def __init__(self, R=5, r=2, p=2, q=3):
+        """
+        Initialisierung der Parameter (Standard: R=5, r=2, p=2 und q=3)
+        """
+        self.R = R
+        self.r = r
+        self.p = p
+        self.q = q
+
+    def torus_knoten(self, t):
+        """
+        Berechnet die Koordinaten des Torusknotens für einen t-Wert..
+        Hier skaliert t (0 bis 1) auf 0 bis 2pi.
+        """
+        theta = 2 * np.pi * t
+
+        x = (self.R + self.r * np.cos(self.p * theta)) * np.cos(self.q * theta)
+        y = (self.R + self.r * np.cos(self.p * theta)) * np.sin(self.q * theta)
+        z = self.r * np.sin(self.p * theta)
+
+        return x, y, z
+
+    def speicher_knotenpunkte(self, filename="torusknoten.txt", anzahl=100):
+        """
+        Berechnet die Koordinaten des Torusknotens für eine definierte Anzahl von Punkten + speichert diese in Datei.
+        ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torusknote.txt
+        """
+        # Anzahl definiert die einzelnen Segmente zwischen 0 und 1
+        t_werte = np.linspace(0, 1, anzahl)
+        with open(filename, "w") as file:
+            for t in t_werte:
+                x, y, z = self.torus_knoten(t)
+                # Im Format x; y; z
+                file.write(f"{x};{y};{z}\n")
+
+        print(f"Torusknotenpunkte sind in '{filename}' gespeichert worden.")
 
 
 if __name__ == "__main__":
