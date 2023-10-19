@@ -339,8 +339,7 @@ class BezierkurveGrafiken:
             go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=4, color='green'), name='Stützpunkte'))
 
         fig.update_layout(
-            width=1200,
-            height=800,
+            title="Bézierkurve (mit Wagon)",
             updatemenus=[
                 dict(
                     type="buttons",
@@ -417,7 +416,7 @@ class BezierkurveGrafiken:
             f"Segment Index: {segment_index}",
             f"Segment Stützpunkte: {', '.join(map(str, segment_stuetzpunkte))}",
             f"Segment Kontrollpunkte: {', '.join(map(str, segment_kontrollpunkte))}",
-            f"Position auf Bezierkurve (relativ zu t): {', '.join(map(str, position))}"
+            f"Position auf Bézierkurve (relativ zu t): {', '.join(map(str, position))}"
         ]
         return infos
 
@@ -648,7 +647,8 @@ class BezierVisualisierung:
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Torsion τ(t)"
         )
-        fig.show()
+
+        return fig
 
     def plot_kruemmung(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_kruemmungswerte(anzahl_punkte)
@@ -671,7 +671,8 @@ class BezierVisualisierung:
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Krümmung κ(t)"
         )
-        fig.show()
+
+        return fig
 
     def plot_normen(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_normen(anzahl_punkte)
@@ -702,7 +703,8 @@ class BezierVisualisierung:
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Normen der Beträge"
         )
-        fig.show()
+
+        return fig
 
 class FrenetDreibeinVisualisierung:
     def __init__(self, bezier_analyse, bezier_grafiken):
@@ -790,7 +792,7 @@ class FrenetDreibeinVisualisierung:
 
         # Bezierkurve
         fig.add_trace(go.Scatter3d(x=x_kurven_wert, y=y_kurven_wert, z=z_kurven_wert, mode='lines',
-                                   line=dict(color='blue', width=2), name='Bezierkurve'))
+                                   line=dict(color='blue', width=2), name='Bézierkurve'))
 
         # Platzhalter für Wagon
         fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
@@ -852,9 +854,9 @@ class FrenetDreibeinVisualisierung:
         # Infos
         infos = {
             'Globales t': t_wert_global,
-            'Bezierkurven-Segment Index': segment_index,
+            'Bézierkurve-Segment Index': segment_index,
             'Lokales t': lokales_t,
-            'Position auf der Bezierkurve': position,
+            'Position auf der Bézierkurve': position,
             'Segment Stützpunkte': segment_stuetzpunkte,
             'Segment Kontrollpunkte': segment_kontrollpunkte,
             'Tangentenvektor (T)': T,
@@ -902,7 +904,7 @@ class ParallelRahmenVisualisierung:
 
         fig = go.Figure()
 
-        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines', line=dict(color='blue', width=2), name='Bezierkurve'))
+        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines', line=dict(color='blue', width=2), name='Bézierkurve'))
         fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers', marker=dict(size=7, color='orange'), name='Wagon zu t'))
 
         for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalenvektor'), (B, 'blue', 'Binormalvektor')]:
@@ -978,7 +980,7 @@ class ParallelRahmenVisualisierung:
         # Infos
         infos = {
             'Globales t': t_wert_global,
-            'Bezierkurven-Segment Index': segment_index,
+            'Bézierkurve-Segment Index': segment_index,
             'Lokales t': lokales_t,
             'Position auf der Bezierkurve': position,
             'Segment Stützpunkte': segment_stuetzpunkte,
@@ -993,107 +995,182 @@ class ParallelRahmenVisualisierung:
 
 
 if __name__ == "__main__":
-    if __name__ == "__main__":
 
-        # Stuetzpunkte definieren
-        UNTERORDNER_STRECKEN = "strecken"
-        STRECKE = "_WildeMaus.trk"
-        stuetzpunkte = LeseDatei().trackpunkte_einlesen(f"{UNTERORDNER_STRECKEN}/{STRECKE}")
+    # Stuetzpunkte definieren
+    UNTERORDNER_STRECKEN = "strecken"
+    STRECKE = "_WildeMaus.trk"
+    stuetzpunkte = LeseDatei().trackpunkte_einlesen(f"{UNTERORDNER_STRECKEN}/{STRECKE}")
 
-        # ezierKurveBerechnung Instanz
-        bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
+    # BezierKurveBerechnung Instanz
+    bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
 
-        # Kontrollpunkte berechnen
-        kontrollpunkte, _, _ = bezier_kurve_berechnung.berechne_kontrollpunkte()
+    # Kontrollpunkte berechnen
+    kontrollpunkte, _, _ = bezier_kurve_berechnung.berechne_kontrollpunkte()
 
-        # Bezierkurve an den Punkt t anzeigen
-        t_wert_global = 0.5
+    # Bezierkurve an den Punkt t anzeigen
+    t_wert_global = 0.5
 
-        # Grafiken und Analyse initialisieren
-        grafiken = BezierkurveGrafiken(stuetzpunkte)
-        analyse = BezierAnalyse(stuetzpunkte)
+    # Grafiken und Analyse initialisieren
+    grafiken = BezierkurveGrafiken(stuetzpunkte)
+    analyse = BezierAnalyse(stuetzpunkte)
 
-        # Frenet-Serret-Rahmen-Visualisierung
-        fs_visualisierung = FrenetDreibeinVisualisierung(analyse, grafiken)
-        aktuelle_fig_frenet = fs_visualisierung.initialisiere_grafik()
+    # Frenet-Serret-Rahmen-Visualisierung
+    fs_visualisierung = FrenetDreibeinVisualisierung(analyse, grafiken)
+    aktuelle_fig_frenet = fs_visualisierung.initialisiere_grafik()
 
-        # Bishop-Rahmen-Visualisierung
-        parallel_bishop_visualisierung = ParallelRahmenVisualisierung(analyse, grafiken)
-        aktuelle_fig_bishop = parallel_bishop_visualisierung.initialisiere_grafik()
+    # Bishop-Rahmen-Visualisierung
+    parallel_bishop_visualisierung = ParallelRahmenVisualisierung(analyse, grafiken)
+    aktuelle_fig_bishop = parallel_bishop_visualisierung.initialisiere_grafik()
 
-        # Konfiguration der Dash-App
-        app = dash.Dash(__name__)
-        app.title = "MMCG (2023)"
+    # Dateiname für Darstellung
+    dateiname_ohne_endung = STRECKE.split('.')[0]
 
-        app.layout = html.Div([
-            html.H1("MMCG (2023) - Demo"),
-            # Für das Frenet-Dreibein
+    # Konfiguration der Dash-App
+    app = dash.Dash(__name__)
+    app.title = "MMCG (2023)"
+
+    app.layout = html.Div([
+        html.H1("MMCG (2023) - Demo", style={'textAlign': 'center'}),
+        html.Br(),
+        html.Div([
+            html.Strong("Eingelesene Datei:"),
+            f" {dateiname_ohne_endung}"
+        ], style={'textAlign': 'center'}),
+        # Wagen auf der Bezierkurve anzeigen
+        html.H2("Bézierkurve mit Wagon", style={'textAlign': 'center'}),
+        html.Div([
+            #html.H2("Wagen auf der Bézierkurve"),
+            dcc.Graph(id='wagon-graph', figure=grafiken.zeichne_wagon_bei_t(t_wert_global))
+        ]),
+        # Globaler t-Wert-Slider und Diagrammauswahl
+        html.H2("t-Wert anpassen:", style={'textAlign': 'center'}),
+        html.Div([
+            html.Label("Globales t für Wagenposition und Analyse:", style={'textAlign': 'center'}),
+            dcc.Slider(
+                id='global-t-slider',
+                min=0,
+                max=1,
+                step=0.01,
+                value=0.5,
+                marks={i / 10: f"{i / 10}" for i in range(11)}
+            ),
+            html.H2("Krümmung, Torsion und Normen", style={'textAlign': 'center'}),
             html.Div([
-                html.H2("Frenet-Serret (Dreibein) Rahmen"),
-                dcc.Graph(id='frenet-graph', figure=aktuelle_fig_frenet),
-                dcc.Slider(
-                    id='frenet-slider',
-                    min=0,
-                    max=1,
-                    value=t_wert_global,
-                    marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
-                    step=0.01,
-                    updatemode='drag'
-                ),
-                html.Div(id='frenet-info-text',
-                         style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
-                                'margin': '10px', 'border-radius': '5px'})
-            ]),
-            html.Br(),
-            # Für den Parallel-Rahmen
-            html.Div([
-                html.H2("Paralell-Rahmen  (Bishop)"),
-                dcc.Graph(id='bishop-graph', figure=aktuelle_fig_bishop),
-                dcc.Slider(
-                    id='bishop-slider',
-                    min=0,
-                    max=1,
-                    value=t_wert_global,
-                    marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
-                    step=0.01,
-                    updatemode='drag'
-                ),
-                html.Div(id='bishop-info-text',
-                         style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
-                                'margin': '10px', 'border-radius': '5px'})
-            ])
+                html.Label("Wählen die Grafiken zur Darstellung aus:", style={'textAlign': 'center'}),
+                dcc.Checklist(
+                    id='graph-checklist',
+                    options=[
+                        {'label': 'Torsion', 'value': 'torsion'},
+                        {'label': 'Krümmung', 'value': 'kruemmung'},
+                        {'label': 'Normen', 'value': 'normen'}
+                    ],
+                    value=['torsion', 'kruemmung', 'normen'],
+                    inline=True
+                )
+            ], style={'textAlign': 'center'}),  # Diese Zeile wurde geändert
+        ]),
+        # Analyse-Grafiken
+        html.Div([
+            dcc.Graph(id='torsion-graph'),
+            dcc.Graph(id='kruemmung-graph'),
+            dcc.Graph(id='normen-graph')
+        ]),
+        # Für das Frenet-Dreibein
+        html.Div([
+            html.H2("Frenet-Serret (Dreibein) Rahmen", style={'textAlign': 'center'}),
+            dcc.Graph(id='frenet-graph', figure=aktuelle_fig_frenet),
+            dcc.Slider(
+                id='frenet-slider',
+                min=0,
+                max=1,
+                value=t_wert_global,
+                marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
+                step=0.01,
+                updatemode='drag'
+            ),
+            html.Div(id='frenet-info-text',
+                     style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
+                            'margin': '10px', 'border-radius': '5px'})
+        ]),
+        html.Br(),
+        # Für den Parallel-Rahmen
+        html.Div([
+            html.H2("Parallel-Rahmen (Bishop)", style={'textAlign': 'center'}),
+            dcc.Graph(id='bishop-graph', figure=aktuelle_fig_bishop),
+            dcc.Slider(
+                id='bishop-slider',
+                min=0,
+                max=1,
+                value=t_wert_global,
+                marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
+                step=0.01,
+                updatemode='drag'
+            ),
+            html.Div(id='bishop-info-text',
+                     style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
+                            'margin': '10px', 'border-radius': '5px'})
         ])
+    ])
 
 
-        # Callbacks (für Frenet-Serret Rahmen)
-        @app.callback(
-            [Output('frenet-graph', 'figure'),
-             Output('frenet-info-text', 'children')],
-            [Input('frenet-slider', 'value')]
-        )
-        def update_frenet(aktueller_t_wert):
-            fig = fs_visualisierung.aktualisiere_grafik(aktuelle_fig_frenet, aktueller_t_wert)
+    # Callbacks (für Grafiken)
+    @app.callback(
+        [Output('torsion-graph', 'figure'),
+         Output('kruemmung-graph', 'figure'),
+         Output('normen-graph', 'figure')],
+        [Input('global-t-slider', 'value'),
+         Input('graph-checklist', 'value')]
+    )
+    def update_graphs(t_wert, ausgewaehlte_diagramme):
+        bezier_vis = BezierVisualisierung(BezierAnalyse(stuetzpunkte))
 
-            infos = fs_visualisierung.hole_infos_und_frenet_vektoren_bei_t(aktueller_t_wert)
-            info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
+        torsion_fig = kruemmung_fig = normen_fig = {}
+        if 'torsion' in ausgewaehlte_diagramme:
+            torsion_fig = bezier_vis.plot_torsion(t_wert)
+        if 'kruemmung' in ausgewaehlte_diagramme:
+            kruemmung_fig = bezier_vis.plot_kruemmung(t_wert)
+        if 'normen' in ausgewaehlte_diagramme:
+            normen_fig = bezier_vis.plot_normen(t_wert)
 
-            return fig, info_divs
+        return torsion_fig, kruemmung_fig, normen_fig
+
+    # Callbacks (für Frenet-Serret Rahmen)
+    @app.callback(
+        [Output('frenet-graph', 'figure'),
+         Output('frenet-info-text', 'children')],
+        [Input('frenet-slider', 'value')]
+    )
+    def update_frenet(aktueller_t_wert):
+        fig = fs_visualisierung.aktualisiere_grafik(aktuelle_fig_frenet, aktueller_t_wert)
+
+        infos = fs_visualisierung.hole_infos_und_frenet_vektoren_bei_t(aktueller_t_wert)
+        info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
+
+        return fig, info_divs
 
 
-        # Callbacks (für Parallel-Rahmen)
-        @app.callback(
-            [Output('bishop-graph', 'figure'),
-             Output('bishop-info-text', 'children')],
-            [Input('bishop-slider', 'value')]
-        )
-        def update_bishop(aktueller_t_wert):
-            fig = parallel_bishop_visualisierung.aktualisiere_grafik(aktuelle_fig_bishop, aktueller_t_wert)
+    # Callbacks (für Parallel-Rahmen)
+    @app.callback(
+        [Output('bishop-graph', 'figure'),
+         Output('bishop-info-text', 'children')],
+        [Input('bishop-slider', 'value')]
+    )
+    def update_bishop(aktueller_t_wert):
+        fig = parallel_bishop_visualisierung.aktualisiere_grafik(aktuelle_fig_bishop, aktueller_t_wert)
 
-            infos = parallel_bishop_visualisierung.hole_infos_und_bishop_vektoren_bei_t(aktueller_t_wert)
-            info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
+        infos = parallel_bishop_visualisierung.hole_infos_und_bishop_vektoren_bei_t(aktueller_t_wert)
+        info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
 
-            return fig, info_divs
+        return fig, info_divs
 
 
-        # App starten
-        app.run_server(debug=True)
+    # Callbacks für den Wagen auf der Bezierkurve
+    @app.callback(
+        Output('wagon-graph', 'figure'),
+        [Input('global-t-slider', 'value')]
+    )
+    def update_wagon(t_wert):
+        return grafiken.zeichne_wagon_bei_t(t_wert)
+
+    # App starten
+    app.run_server(debug=True)
