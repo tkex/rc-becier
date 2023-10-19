@@ -912,6 +912,85 @@ class BishopRahmenVisualisierung:
         fig.update_layout(title=f"Bishop-Rahmen mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
         fig.show()
 
+    def initialisiere_grafik(self):
+        x_kurven_wert, y_kurven_wert, z_kurven_wert = self.bezier_grafiken.hole_bezierkurve()
+
+        fig = go.Figure()
+
+        # Bezierkurve
+        fig.add_trace(go.Scatter3d(x=x_kurven_wert, y=y_kurven_wert, z=z_kurven_wert, mode='lines',
+                                   line=dict(color='blue', width=2), name='Bezierkurve'))
+
+        # Platzhalter für Wagon
+        fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='markers',
+                                   marker=dict(size=7, color='orange'), name='Wagon zu t'))
+
+        # Platzhalter für TNB-Vektoren
+        for color, name in [('red', 'Tangentenvektor'), ('green', 'Normalenvektor'), ('blue', 'Binormalvektor')]:
+            fig.add_trace(go.Scatter3d(
+                x=[0, 0],
+                y=[0, 0],
+                z=[0, 0],
+                mode='lines',
+                line=dict(color=color, width=6),
+                name=name
+            ))
+
+        return fig
+
+    def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
+        idx = int(min(t_wert_global, 0.99) * 100)
+        position = self.alle_positionen[idx]
+        T = self.alle_T_vektoren[idx] * self.vektoren_groesse
+        N = self.alle_N_vektoren[idx] * self.vektoren_groesse
+        B = self.alle_B_vektoren[idx] * self.vektoren_groesse
+
+        # Wagon
+        fig.data[1].x = [position[0]]
+        fig.data[1].y = [position[1]]
+        fig.data[1].z = [position[2]]
+
+        # TNB-Vektoren aktualisieren
+        for i, vector in enumerate([T, N, B]):
+            fig.data[i + 2].x = [position[0], position[0] + vector[0]]
+            fig.data[i + 2].y = [position[1], position[1] + vector[1]]
+            fig.data[i + 2].z = [position[2], position[2] + vector[2]]
+
+        fig.update_layout(
+            title=f"Bishop-Rahmen mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
+            scene=dict(
+                xaxis=dict(showbackground=zeige_details, title_text="x" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
+                yaxis=dict(showbackground=zeige_details, title_text="y" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
+                zaxis=dict(showbackground=zeige_details, title_text="z" if zeige_details else "", showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details)
+            )
+        )
+
+        return fig
+
+    def hole_infos_und_bishop_vektoren_bei_t(self, t_wert_global):
+
+        # Hole Grundinfos
+        segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
+            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
+
+        # Hole Paralellrahmen Vektoren
+        T, N, B = self.bezier_analyse.paralell_rahmen_bishop(t_wert_global)
+
+        # Infos
+        infos = {
+            'Globales t': t_wert_global,
+            'Bezierkurven-Segment Index': segment_index,
+            'Lokales t': lokales_t,
+            'Position auf der Bezierkurve': position,
+            'Segment Stützpunkte': segment_stuetzpunkte,
+            'Segment Kontrollpunkte': segment_kontrollpunkte,
+            'Tangentenvektor (T)': T,
+            'Normalenvektor (N)': N,
+            'Binormalenvektor (B)': B
+        }
+
+        return infos
+
 
 
 if __name__ == "__main__":
