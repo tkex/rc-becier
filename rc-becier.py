@@ -1196,7 +1196,7 @@ if __name__ == "__main__":
 
         torsion_fig = kruemmung_fig = normen_fig = {}
         if 'torsion' in ausgewaehlte_diagramme:
-            torsion_fig = bezier_vis.plotet_torsion(t_wert)
+            torsion_fig = bezier_vis.plotte_torsion(t_wert)
         if 'kruemmung' in ausgewaehlte_diagramme:
             kruemmung_fig = bezier_vis.plotte_kruemmung(t_wert)
         if 'normen' in ausgewaehlte_diagramme:
