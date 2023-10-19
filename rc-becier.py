@@ -778,7 +778,7 @@ class FrenetSerretVisualisierung:
                 name=name
             ))
 
-        fig.update_layout(title=f"Frenet-Serret mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.update_layout(title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
 
         fig.show()
 
@@ -865,10 +865,60 @@ class FrenetSerretVisualisierung:
 
         return infos
 
+class BishopRahmenVisualisierung:
+    def __init__(self, bezier_analyse, bezier_grafiken):
+        self.bezier_analyse = bezier_analyse
+        self.bezier_grafiken = bezier_grafiken
+        self.vektoren_groesse = 1.0  # Initialwert
+        self.alle_positionen, self.alle_T_vektoren, self.alle_N_vektoren, self.alle_B_vektoren = self.berechne_positions_vektoren()
+        self.bezier_kurve_berechnung = bezier_kurve_berechnung
+
+    def berechne_positions_vektoren(self):
+        t_values = np.linspace(0, 1, 100)
+
+        achterbahn_positionen = np.zeros((len(t_values), 3))
+        T_vektoren = np.zeros((len(t_values), 3))
+        N_vektoren = np.zeros((len(t_values), 3))
+        B_vektoren = np.zeros((len(t_values), 3))
+
+        for idx, t in enumerate(t_values):
+            _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t, BezierFormeln.paralell_rahmen_bishop)
+            T, N, B = self.bezier_analyse.paralell_rahmen_bishop(t)
+
+            achterbahn_positionen[idx] = position
+            T_vektoren[idx] = T
+            N_vektoren[idx] = N
+            B_vektoren[idx] = B
+
+        return achterbahn_positionen, T_vektoren, N_vektoren, B_vektoren
+
+    def zeichne_wagon_und_tnb_statisch(self, t_wert_global):
+        idx = int(min(t_wert_global, 0.99) * 100)
+        position = self.alle_positionen[idx]
+        T = self.alle_T_vektoren[idx] * self.vektoren_groesse
+        N = self.alle_N_vektoren[idx] * self.vektoren_groesse
+        B = self.alle_B_vektoren[idx] * self.vektoren_groesse
+
+        x_kurve, y_kurve, z_kurve = self.bezier_grafiken.hole_bezierkurve()
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter3d(x=x_kurve, y=y_kurve, z=z_kurve, mode='lines', line=dict(color='blue', width=2), name='Bezierkurve'))
+        fig.add_trace(go.Scatter3d(x=[position[0]], y=[position[1]], z=[position[2]], mode='markers', marker=dict(size=7, color='orange'), name='Wagon zu t'))
+
+        for vector, color, name in [(T, 'red', 'Tangentenvektor'), (N, 'green', 'Normalenvektor'), (B, 'blue', 'Binormalvektor')]:
+            fig.add_trace(go.Scatter3d(x=[position[0], position[0] + vector[0]], y=[position[1], position[1] + vector[1]], z=[position[2], position[2] + vector[2]], mode='lines', line=dict(color=color, width=6), name=name))
+
+        fig.update_layout(title=f"Bishop-Rahmen mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.show()
+
+
 
 if __name__ == "__main__":
     # Stuetzpunkte definieren
-    stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
+    UNTERORDNER_STRECKEN = "strecken"
+    STRECKE = "_WildeMaus.trk"
+    stuetzpunkte = LeseDatei().trackpunkte_einlesen(f"{UNTERORDNER_STRECKEN}/{STRECKE}")
 
     # Instanz von BezierKurveBerechnung
     bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
@@ -879,7 +929,7 @@ if __name__ == "__main__":
     # Bezierkurve anzeigen
     t_wert_global = 0.5
 
-
+    # -------------------------------------------------------------------------
 
     # Bezierkurve bei t anzeigen mit Wagon (statisch)
     grafiken = BezierkurveGrafiken(stuetzpunkte)
@@ -918,6 +968,9 @@ if __name__ == "__main__":
     #grafiken = BezierkurveGrafiken(stuetzpunkte)
     #fs_visualisierung = FrenetSerretVisualisierung(analyse, grafiken)
     #fs_visualisierung.zeichne_wagon_und_tnb_statisch(t_wert_global)
+
+
+    '''
 
     t_wert_global_frenet = 0.0
     grafiken = BezierkurveGrafiken(stuetzpunkte)
@@ -972,5 +1025,16 @@ if __name__ == "__main__":
         return aktuelle_fig, info_divs
 
     app.run_server(debug=True)
+    '''
 
+    # --- Paralellrahmen ---
+
+    #stuetzpunkte = LeseDatei().trackpunkte_einlesen('_WildeMaus.trk')
+    #bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
+    #analyse = BezierAnalyse(stuetzpunkte)
+    #grafiken = BezierkurveGrafiken(stuetzpunkte)
+
+    # Bishop-Rahmen-Visualisierung
+    bishop_visualisierung = BishopRahmenVisualisierung(analyse, grafiken)
+    bishop_visualisierung.zeichne_wagon_und_tnb_statisch(0.0)
 
