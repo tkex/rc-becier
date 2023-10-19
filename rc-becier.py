@@ -1039,12 +1039,15 @@ if __name__ == "__main__":
                     marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
                     step=0.01,
                     updatemode='drag'
-                )
+                ),
+                html.Div(id='frenet-info-text',
+                         style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
+                                'margin': '10px', 'border-radius': '5px'})
             ]),
             html.Br(),
             # Für den Parallel-Rahmen
             html.Div([
-                html.H2("Paralellrahmen (Bishop)"),
+                html.H2("Paralell-Rahmen  (Bishop)"),
                 dcc.Graph(id='bishop-graph', figure=aktuelle_fig_bishop),
                 dcc.Slider(
                     id='bishop-slider',
@@ -1054,29 +1057,42 @@ if __name__ == "__main__":
                     marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
                     step=0.01,
                     updatemode='drag'
-                )
+                ),
+                html.Div(id='bishop-info-text',
+                         style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
+                                'margin': '10px', 'border-radius': '5px'})
             ])
         ])
 
 
         # Callbacks (für Frenet-Serret Rahmen)
         @app.callback(
-            Output('frenet-graph', 'figure'),
+            [Output('frenet-graph', 'figure'),
+             Output('frenet-info-text', 'children')],
             [Input('frenet-slider', 'value')]
         )
         def update_frenet(aktueller_t_wert):
             fig = fs_visualisierung.aktualisiere_grafik(aktuelle_fig_frenet, aktueller_t_wert)
-            return fig
+
+            infos = fs_visualisierung.hole_infos_und_frenet_vektoren_bei_t(aktueller_t_wert)
+            info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
+
+            return fig, info_divs
 
 
         # Callbacks (für Parallel-Rahmen)
         @app.callback(
-            Output('bishop-graph', 'figure'),
+            [Output('bishop-graph', 'figure'),
+             Output('bishop-info-text', 'children')],
             [Input('bishop-slider', 'value')]
         )
         def update_bishop(aktueller_t_wert):
             fig = parallel_bishop_visualisierung.aktualisiere_grafik(aktuelle_fig_bishop, aktueller_t_wert)
-            return fig
+
+            infos = parallel_bishop_visualisierung.hole_infos_und_bishop_vektoren_bei_t(aktueller_t_wert)
+            info_divs = [html.Div(f"{key}: {value}") for key, value in infos.items()]
+
+            return fig, info_divs
 
 
         # App starten
