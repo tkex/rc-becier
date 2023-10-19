@@ -1062,14 +1062,15 @@ class ParallelRahmenVisualisierung:
 
         return infos
 
-class TorusKnot:
+class TorusKnoten:
     """
     Berechnung von Torusknoten für kubische Bezierkurven unter Berücksichtigung
-    der Skalierung von t-Werten im Bereich t=0 bis t=1 auf 0 bis 2pi.
+    der Skalierung von t-Werten im Bereich t=0 bis t=1 auf 0 bis 2pi und realisiert die Konvertierung von Torus-Koordinaten
+    in kartesische Koordinaten.
     """
     def __init__(self, R=5, r=2, p=2, q=3):
         """
-        Initialisierung der Parameter (Standard: R=5, r=2, p=2 und q=3)
+        Initialisierung der Parameter (Standard: siehe Parametrisierung; R=5, r=2, p=2 und q=3)
         """
         self.R = R
         self.r = r
@@ -1078,39 +1079,43 @@ class TorusKnot:
 
     def torus_knoten(self, t):
         """
-        Berechnet die Koordinaten des Torusknotens für einen t-Wert..
+        Berechnet die Koordinaten des Torusknotens für einen t-Wert.
         Hier skaliert t (0 bis 1) auf 0 bis 2pi.
         """
+        # Mappen vom t-Wert zu 0 bis 2pi
         theta = 2 * np.pi * t
 
+        # XY Projektion in der Ebene
         x = (self.R + self.r * np.cos(self.p * theta)) * np.cos(self.q * theta)
         y = (self.R + self.r * np.cos(self.p * theta)) * np.sin(self.q * theta)
+        # Höhe der Kurve
         z = self.r * np.sin(self.p * theta)
 
         return x, y, z
 
-    def speicher_knotenpunkte(self, filename="torusknoten.txt", anzahl=100):
+    def speichere_knotenpunkte(self, filename="torus.txt", anzahl=100):
         """
         Berechnet die Koordinaten des Torusknotens für eine definierte Anzahl von Punkten + speichert diese in Datei.
-        ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torusknote.txt
+        ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torus.txt
         """
-        # Anzahl definiert die einzelnen Segmente zwischen 0 und 1
+        # Anzahl der einzelnen Punkte zwischen t=0 und t=1
         t_werte = np.linspace(0, 1, anzahl)
+
         with open(filename, "w") as file:
             for t in t_werte:
                 x, y, z = self.torus_knoten(t)
-                # Im Format x; y; z
-                file.write(f"{x};{y};{z}\n")
+                # Im Format x; y; z (2 Dezimalstellen)
+                file.write(f"{x:.2f};{y:.2f};{z:.2f}\n")
 
-        print(f"Torusknotenpunkte sind in '{filename}' gespeichert worden.")
+        print(f"Torus in '{filename}' gespeichert.")
 
 
 if __name__ == "__main__":
 
     # Stützpunkte definieren
     UNTERORDNER_STRECKEN = "strecken"
-    STRECKE = "_DizzyButterfly.trk"
-    #STRECKE = 'torus.csv'
+    #STRECKE = "_DizzyButterfly.trk"
+    STRECKE = 'torus.csv'
 
     # Einlesen der Stützpunkte
     stuetzpunkte = LeseDatei().trackpunkte_einlesen(f"{UNTERORDNER_STRECKEN}/{STRECKE}")
@@ -1292,3 +1297,12 @@ if __name__ == "__main__":
 
     # App starten
     app.run_server(debug=True)
+
+
+    # --- Torusknoten generieren
+
+    # Instanz Torusknoen
+    #torus_knoten = TorusKnoten()
+
+    # Speichere Torus
+    #torus_knoten.speichere_knotenpunkte(filename="torus.txt", anzahl=100)
