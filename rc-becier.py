@@ -1,7 +1,8 @@
-"""
-Bezierkurven
-Projektbeschreibung (TODO)
-"""
+'''
+Projektbeschreibung
+TODO: Endlich machen!
+'''
+
 
 import numpy as np
 import plotly.graph_objects as go
@@ -11,8 +12,41 @@ from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output, State
 
+# **********************
+# ** KONFIGURATIONEN  **
+# **********************
+
+# ** DATEIEN **
+# Unterordner in dem die Strecken liegen
+UNTERORDNER_STRECKEN = "strecken"
+
+# Streckennamen (an Auskommentieren achten, sofern andere Strecke wie _DizzyButterfly verwendet werden will)
+# STRECKE = "_DizzyButterfly.trk"
+STRECKE = 'tobiko_2023_torus.csv'
+
+
+# ** Startpunkte der Visualisierungen **
+# Bezierkurve und Diagramme an globalen Punkt t anzeigen
+t_wert_global = 0.5
+# Frenet-Serret und Parallelrahmen (Bishop) an globalen Punkt t anzeigen
+t_wert_frenet_parallel = 0.0
+
+
+# ** Auflösung der Grafiken **
+# Achtung: Die Umstellung auf einen geringen Wert kann dazu führen, dass der berechnete Wert leicht von der visuellen Darstellung abweicht.
+
+
 
 class LeseDatei:
+    """
+    Klasse für das Einlesen der Stützstellen x0 und x3 von .trk und .csv-Dateien.
+
+    Es können jeweils die vorliegenden und vorgefertigen TRK-Dateien eingelesen werden, die anschließend geparsed werden
+    um die notwendigen Stützstellen ohne die Sonderzeichen einzulesen. Für die CSV-Dateien werden die x, y, z-Koordinaten
+    ebenfalls eingelesen - das Format der CSV-Datei muss dabei x; y; z sein.
+
+    Mittels Fall-Unterscheidung in der trackpunkte_einlesen() wird sichergestellt, welche Parsing-Funktion verwendet wird.
+    """
 
     @staticmethod
     def datei_lesen(dateiname):
@@ -50,7 +84,7 @@ class LeseDatei:
             if zeile.startswith('#') or zeile == '':
                 continue
 
-            x, y, z = map(float, zeile.split(';'))  # Für andere Trennzeichen, diesen Wert anpassen
+            x, y, z = map(float, zeile.split(';'))  # Für andere Trennzeichen, hier anpassen
             stuetzpunkte.append((x, y, z))
 
         return np.array(stuetzpunkte)
@@ -58,21 +92,30 @@ class LeseDatei:
     def trackpunkte_einlesen(self, dateiname):
         zeilen = self.datei_lesen(dateiname)
 
-        # Dateiendung überprüfen und entsprechende korrekte Parsing-Funktion verwenden
+        # Dateiendung überprüfen und entsprechende Parsing-Funktion verwenden
         if dateiname.lower().endswith('.trk'):
             return self.trk_daten_parsen(zeilen)
         elif dateiname.lower().endswith('.csv'):
             return self.csv_daten_parsen(zeilen)
         else:
-            print(f"Nicht unterstütztes Dateiformat für {dateiname}.")
+            print(f"Nicht unterstütztes Dateiformat für {dateiname} (muss .trk oder .csv sein).")
             return np.array([])
 
 
-
 class KubischeBezier:
+    '''
+    Klasse für die Formeln der kubischen Bézierkurven (R^3).
+
+    Manuelle Berechnung der kubischen Bézierkurve für t und die (manuell) berechneten Ableitungen.
+
+    TODO: Eventuell mittels SymPy zwecks Vereinfachung refaktorisieren.
+    '''
     def __init__(self, x0, x1, x2, x3):
         """
-        Initialisiert die kubische Bézier-Kurve mit gegebenen Kontrollpunkten.
+        Initialisierung die kubische Bézierkurve (mit gegebenen Kontrollpunkten).
+
+        x0, x3: Stützstellen
+        x1, x2: Berechnete Kontrollpunkte ai, bi
         """
 
         self.x0 = np.array(x0)
@@ -82,14 +125,18 @@ class KubischeBezier:
 
     def kubische_bezier(self, t):
         """
-        Berechnet den Wert der kubischen Bézier-Kurve bei einem gegebenen Parameter t.
+        Berechnet den Wert der kubischen Bézierkurve zum Parameter t.
         """
 
+        # Helper um sicherzustellen, dass t für spätere Skalare richtig konvertiert wird (Fehlermeldungen beseitigen)
         if np.isscalar(t):
+            # t als eindimensionales Numpy-Array konvertieren
             t = np.array([t])
         else:
+            # Wenn t (bereits) Liste/Array ist, in normales Numpy-Array konvertieren
             t = np.array(t)
 
+        # Erweitert t um neuen Achsenindex zwecks Vektoroperationen auf die Bézierkurven-Formelfunktion
         t = t[:, np.newaxis]
 
         kub_bezier = ((1 - t) ** 3 * self.x0 +
@@ -101,8 +148,7 @@ class KubischeBezier:
 
     def bezier_ableitungen(self, t):
         """
-        Erste, zweite und dritte Ableitung der kubischen Bezierkurve (manuell + vektorisiert).
-        TODO: Eventuell mit SymPy refaktorisieren
+        Erste, zweite und dritte Ableitung der kubischen Bézierkurve (vektorisiert).
         """
 
         x0, y0, z0 = self.x0
@@ -110,7 +156,8 @@ class KubischeBezier:
         x2, y2, z2 = self.x2
         x3, y3, z3 = self.x3
 
-        # Erste Ableitung (Tangentenvektor der Kurve) für x, y und z
+        # Erste Ableitung (Tangentenvektor der Kurve) für x, y und z bei t
+        # Zeigt in Richtung der Kurve an diesem Punkt (Geschwindigkeit bei Bewegung)
         bez_abl1_x = (-3 * x0 * (1 - t) ** 2 + 3 * x1 * (1 - t) ** 2 - 6 * x1 * (1 - t) * t + 6 * x2 * (1 - t) * t
                   - 3 * x2 * t ** 2 + 3 * x3 * t ** 2)
         bez_abl1_y = (-3 * y0 * (1 - t) ** 2 + 3 * y1 * (1 - t) ** 2 - 6 * y1 * (1 - t) * t + 6 * y2 * (1 - t) * t
@@ -119,13 +166,14 @@ class KubischeBezier:
                   - 3 * z2 * t ** 2 + 3 * z3 * t ** 2)
         bez_abl_1 = np.array([bez_abl1_x, bez_abl1_y, bez_abl1_z])
 
-        # Zweite Ableitung (Normalenvektor der Kurve dh. Richtung des Tangentenvektors) für x, y und z
+        # Zweite Ableitung (Beschleunigungsvektor der Kurve; Krümmungsvektor) für x, y und z zu t
+        # Zeigt die Änderungsrate des Tangentenvektors an diesem Punkt (Beschleunigung bei Bewegung entlang der Kurve)
         bez_abl2_x = (6 * x0 * (1 - t) - 12 * x1 * (1 - t) + 6 * x2 * (1 - t) + 6 * x1 * t - 12 * x2 * t + 6 * x3 * t)
         bez_abl2_y = (6 * y0 * (1 - t) - 12 * y1 * (1 - t) + 6 * y2 * (1 - t) + 6 * y1 * t - 12 * y2 * t + 6 * y3 * t)
         bez_abl2_z = (6 * z0 * (1 - t) - 12 * z1 * (1 - t) + 6 * z2 * (1 - t) + 6 * z1 * t - 12 * z2 * t + 6 * z3 * t)
         bez_abl_2 = np.array([bez_abl2_x, bez_abl2_y, bez_abl2_z])
 
-        # Dritte Ableitung
+        # Dritte Ableitung (Änderungsrate des Krümmungsvektors (der Beschleunigung); Ruck) für x, y und z zu t
         bez_abl3_x = -6 * x0 + 18 * x1 - 18 * x2 + 6 * x3
         bez_abl3_y = -6 * y0 + 18 * y1 - 18 * y2 + 6 * y3
         bez_abl3_z = -6 * z0 + 18 * z1 - 18 * z2 + 6 * z3
@@ -136,7 +184,10 @@ class KubischeBezier:
 
 
 class BezierKurveBerechnung:
-
+    """
+    Klasse für die Berechnung der Kontrollpunkte x1 und x2, dem Aufstellen des linearen Gleichungssystem (LGS),
+    Anzeige der Matrix A und dem Vektor rhs und die der Stütz- und Kontrollpunkte und Berechnung der Bézierkurven-Punkte.
+    """
     def __init__(self, stuetzpunkte):
         # Stützpunkte in ein Numpy-Array schreiben
         self.stuetzpunkte = np.asarray(stuetzpunkte)
@@ -153,12 +204,13 @@ class BezierKurveBerechnung:
             A: Die Koeffizientenmatrix vom LGS
             rhs: Rechte Seite vom LGS
         """
-        # Anzahl der Segmente
-        # -1 da ein Segment durch zwei Stützpunkte definiert ist
-        # Daher ist die Anzahl der Segmente immer um 1 geringer als die Anzahl der Stützpunkte
+        # Anzahl der Segmente; Subtraktion mit -1, da ein Segment durch zwei Stützpunkte definiert ist
+        # (Anzahl der Segmente beträgt immer 1 geringer als die Anzahl der Stützpunkte)
         n = len(self.stuetzpunkte) - 1
+
         # Koeffizientenmatrix A des LGS mit Nullen füllen
         A = np.zeros((2 * n, 2 * n))
+
         # Rechte Seite (rhs) des LGS mit Nullen füllen
         rhs = np.zeros((2 * n, 3))
 
@@ -166,21 +218,25 @@ class BezierKurveBerechnung:
 
     def _setze_lgs(self, n, A, rhs):
         """
-       Setzt die Koeffizientenmatrix A und den Vektor rhs zu den eingelesenen Stützpunkten.
-       Dabei werden die Stetigkeitsforderungen und Anforderungen einer geschlossenen Kurve auf Basis
-       der Vorlesung und dem Dokument 'Achterbahn-Editor/-Simulator' (S. 5-6) gewährleistet.
+        Setzt die Koeffizientenmatrix A und den Vektor rhs zu den eingelesenen Stützpunkten.
+        Dabei werden die Stetigkeitsforderungen und Anforderungen einer geschlossenen Kurve auf Basis
+        der Mathematik-Vorlesung und dem Dokument 'Achterbahn-Editor/-Simulator' (S. 5-6) gewährleistet.
 
-       Parameter:
+        ** Gleichungen **
+
+
+        Parameter:
            n: Anzahl Segmente auf Basis der Stützstellen (x0, x3)
            A: Koeffizientenmatrix des LGS
            rhs: Rechte Seite des LGS
 
-       Rückgabe:
+        Rückgabe:
            A: Koeffizientenmatrix.
            rhs: Vektor (Rechte Seite des LGS)
-       """
+        """
 
-        # Index (idx)
+        # Index (idx) mit Werten 0 bis n-1 (siehe initialisiere_lgs) für Anzahl der Segmente
+        # für Positionierung in Matrix A und Vektor rhs
         idx = np.arange(n)
 
         # --- Geschlossene Kurven ---
@@ -192,7 +248,7 @@ class BezierKurveBerechnung:
         rhs[2 * idx] = 2 * self.stuetzpunkte[(idx + 1) % n] # Rechte Seite
 
         # III. a_i + 2a_{i+1} = b_{i+1} + 2b_i
-        # in Ax = rhs: a_i + 2a_{i+1} - b_{i+1} - 2b_i = 0
+        # in Form Ax = rhs: a_i + 2a_{i+1} - b_{i+1} - 2b_i = 0
         A[2 * idx + 1, 2 * idx] = 1 # Koeffizient für a_i
         A[2 * idx + 1, (2 * idx + 2) % (2 * n)] = 2 # Koeffizient für 2a_{i+1}
         A[2 * idx + 1, 2 * idx + 1] = -2  # Koeffizient für -2b_i
@@ -208,13 +264,13 @@ class BezierKurveBerechnung:
         rhs[2 * n - 2] = 2 * self.stuetzpunkte[0] # Rechte Seite
 
         # II. a_{n-1} - 2b_{n-1} = -2a_0 + b_0
-        # => in Ax = rhs: a_{n-1} - 2b_{n-1} + 2a_0 - b_0 = 0
+        # => in Form Ax = rhs: a_{n-1} - 2b_{n-1} + 2a_0 - b_0 = 0
         A[2 * n - 1, 2 * n - 2] = 1 # Koeffizient für a_{n-1}
         A[2 * n - 1, 2 * n - 1] = -2 # Koeffizient für -2b_{n-1}
         A[2 * n - 1, 0] = 2  # Koeffizient für 2a_0
         A[2 * n - 1, 1] = -1 # Koeffizient für b_0
 
-        # Matrix und Vektor
+        # Matrix A und Vektor rhs
         return A, rhs
 
     def berechne_kontrollpunkte(self):
@@ -223,6 +279,7 @@ class BezierKurveBerechnung:
         if self._kontrollpunkte is not None:
             return self._kontrollpunkte, _, _
 
+        # Initialisieren und Setzen des LGS
         n, A, rhs = self.initialisiere_lgs()
         A, rhs = self._setze_lgs(n, A, rhs)
 
@@ -233,11 +290,13 @@ class BezierKurveBerechnung:
         # WICHTIG: Kann deswegen minimal andere Ergebnisse bei Torsion und Krümmung liefern.
         kontrollpunkte = np.around(kontrollpunkte, decimals=2)
 
+        # Array umformen in 2x3 (Paar von 2 mit 3 Koordinaten xyz) für ai, bi (x1, x2)
         kontrollpunkte = kontrollpunkte.reshape(-1, 2, 3)
 
         # Speichern der berechneten Kontrollpunkte
         self._kontrollpunkte = kontrollpunkte.tolist()
 
+        # Ausgabe von Vektor x der 2 Unbekannten Kontrollpunkte ai und bi (_kontrollpunkte) und der Matrix A und dem Vektor rhs
         return self._kontrollpunkte, A, rhs
 
     @staticmethod
@@ -277,10 +336,10 @@ class BezierKurveBerechnung:
         Berechnet die gesamte Bézierkurve aus den gegebenen Stütz- und Kontrollpunkten.
 
         Parameter:
-            t_werte: Einzelnen Parameterwerte für die Bézierkurve.
+            t_werte: Einzelne t-Werte für die Bézierkurve
 
         Rückgabe:
-            Kurvenpunkte: Punkte der gesamten Bézierkurve.
+            Kurvenpunkte: Punkte auf der gesamten Bézierkurve
         """
         kontrollpunkte, _, _ = self.berechne_kontrollpunkte()
 
@@ -288,7 +347,7 @@ class BezierKurveBerechnung:
 
         # Da geschlossene Bezierkurve mit n Stützpunkten hat, besitzt man n-1 Segmente
         for i in range(len(self.stuetzpunkte) - 1):
-            # Erstellt jeweils eine Instanz der KubischeBezier Klasse für das aktuelle Segment
+            # Instanz der KubischeBezier Klasse für das aktuelle Segment
             bezier_segment = KubischeBezier(self.stuetzpunkte[i], *kontrollpunkte[i],
                                             self.stuetzpunkte[(i + 1) % len(self.stuetzpunkte)])
 
@@ -302,49 +361,69 @@ class BezierKurveBerechnung:
 
     def berechne_position_fuer_globales_t(self, globales_t):
         """
-        Berechnet die Koordinaten für ein gegebenes globales t (t=0 bis t=1).
+        Berechnet die Position für ein gegebenes globales t (t=0 bis t=1; Position auf der gesamten Kurve) und konvertiert
+        das globale t zwecks der Segmentierung (der einzelnen Bézierstücken) relativ zur Posititon der Bézierkurve.
+
+        Ein Problem war es, akkurat die Positionierungen auf der Kurve, die aus mehreren Segmenten besteht, zu bestimmen.
+        Die Idee war es, alle relevanten Information für das globale t mittels dieser Helferfunktion zu realisieren.
+
+        ** Berechnungsgrundlage **
+        - Segment-Index-Bestimmung:
+          Um herauszufinden, in welchem Segment der Punkt zum globalen t liegt, wird das globale t mit der Anzahl
+          der Stützpunkte multipliziert -> Skalierung auf die Anzahl der Stützpunkte.
+          Es wird -1 subtrahiert, um auf die Anzahl der Segmente zu skalieren (da Anzahl n Stützstellen = Anzahl Segmente n-1).
+          Durch int()-Abrunden wird der ganzzahlige Index bestimmt, in dem sich der Punkt befindet.
+
+        - Lokales t für das Segment:
+          Globales t nutzen, um die Position (lokales t) innerhalb des bestimmten Segments zu finden.
+          Gleiche Skalierung wie beim Segment-Index; allerdings wird der aktuelle Index des Segments abgezogen, um
+          von der Segment-Indexierung
+
 
         Parameter:
             globales_t: Das globale t (siehe oben)
 
         Rückgabe:
-            segment_index: Der Index des Segments.
-            lokales_t: Das lokale t für das Segment.
-            segment_kontrollpunkte: Die Kontrollpunkte des Segments.
-            segment_stuetzpunkte: Die Stützstellen des Segments.
-            position: Die Koordinaten auf der Bezierkurve zum gegebenen globalen t.
+            segment_idx: Der Index des Segments
+            lokales_t: Das lokale t für das Segment
+            segment_kontrollpunkte: Die Kontrollpunkte des Segments
+            segment_stuetzpunkte: Die Stützstellen des Segments
+            position: Position auf der Bezierkurve (zum globalen t)
         """
         kontrollpunkte, _, _ = self.berechne_kontrollpunkte()
 
         # Index des aktuellen Segments
-        i = int(globales_t * (len(self.stuetzpunkte) - 1))
+        segment_idx = int(globales_t * (len(self.stuetzpunkte) - 1))
 
-        # Wenn i größer oder gleich der Länge der Kontrollpunkte ist, wird i auf den letzten gültigen Index gesetzt.
-        # Überprüfung des Index
-        if i >= len(kontrollpunkte):
+        # Überprüfung des Segment-Index, dass der Segment-Index nicht gleich der Länge der berechneten kontrollpunkte ist
+        # Wenn i größer oder gleich der Länge der Kontrollpunkte ist, wird i auf den letzten Index gesetzt
+        if segment_idx >= len(kontrollpunkte):
             # Anpassung des Index
-            i = len(kontrollpunkte) - 1
+            segment_idx = len(kontrollpunkte) - 1
 
         # t-Wert innerhalb des aktuellen Segments
-        lokales_t_segment = globales_t * (len(self.stuetzpunkte) - 1) - i
+        lokales_t_segment = globales_t * (len(self.stuetzpunkte) - 1) - segment_idx
 
-        # Erstellt eine Instanz der KubischeBezier Klasse für das aktuelle Segment
-        bezier_segment = KubischeBezier(self.stuetzpunkte[i], *kontrollpunkte[i],
-                                        self.stuetzpunkte[(i + 1) % len(self.stuetzpunkte)])
+        # Instanz der KubischeBezier Klasse (für das aktuelle Segment)
+        bezier_segment = KubischeBezier(self.stuetzpunkte[segment_idx], *kontrollpunkte[segment_idx],
+                                        self.stuetzpunkte[(segment_idx + 1) % len(self.stuetzpunkte)])
 
-        # Berechne die Position auf der Bezierkurve für das lokale t innerhalb des aktuellen Segments
+        # Position auf der Bezierkurve für das lokale t (innerhalb des aktuellen Segments)
         position = bezier_segment.kubische_bezier([lokales_t_segment]).squeeze()
 
-        # Hole die Stützstellen für das jeweilige Segment
-        segment_stuetzpunkte = (self.stuetzpunkte[i], self.stuetzpunkte[(i + 1) % len(self.stuetzpunkte)])
+        # Stützstellen für das jeweilige Segment
+        segment_stuetzpunkte = (self.stuetzpunkte[segment_idx], self.stuetzpunkte[(segment_idx + 1) % len(self.stuetzpunkte)])
 
-        # Hole die Kontrollpunkte für das Segment ai, bi
-        segment_kontrollpunkte = kontrollpunkte[i]
+        # Kontrollpunkte für das Segment ai, bi
+        segment_kontrollpunkte = kontrollpunkte[segment_idx]
 
-        return i, lokales_t_segment, segment_kontrollpunkte, segment_stuetzpunkte, position
+        return segment_idx, lokales_t_segment, segment_kontrollpunkte, segment_stuetzpunkte, position
 
 
 class BezierkurveGrafiken:
+    """
+    Klasse für das Plotten der Grafiken der Bézierkurve.
+    """
     def __init__(self, stuetzpunkte):
         self.kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
         self.stuetzpunkte = stuetzpunkte
@@ -356,6 +435,10 @@ class BezierkurveGrafiken:
 
 
     def bz_plotten(self, kurvenpunkte):
+        """
+        Plotly/Dash-Konfiguration für die Darstellung der Bézierkurve.
+        Wird in render_bezierkurve verwendet, um die Parameter der Kurvenpunkte zu berechnen und die gesamte Bézierkurve darzustellen.
+        """
         x, y, z = kurvenpunkte[:, 0], kurvenpunkte[:, 1], kurvenpunkte[:, 2]
         fig = go.Figure()
 
@@ -399,12 +482,20 @@ class BezierkurveGrafiken:
         return fig
 
     def render_bezierkurve(self):
+        """
+        Plotten der Bézierkurve durch die Bézier-Kurvenpunkte.
+        """
         t_werte = np.linspace(0, 1, 10)
+        # Berechnen der Bézierkurve-Punkte
         kurvenpunkte = self.kurve_berechnung.berechne_gesamte_bezierkurve(t_werte)
-        # Direktes Return der Grafik
+
+        # Plotten der Bézierkurve mit den berechneten Kurvenpunkten
         return self.bz_plotten(kurvenpunkte)
 
     def plotte_wagon_bei_t(self, globales_t):
+        """
+        Plotte ein Wagon zum globalen t auf der Bézierkurve.
+        """
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = self.kurve_berechnung.berechne_position_fuer_globales_t(
             globales_t)
 
@@ -419,13 +510,13 @@ class BezierkurveGrafiken:
                                   mode='markers', marker=dict(size=10, color='orange'),
                                   name='Wagon relativ zum t-Wert')
 
-        # Wenn es bereits eine Spur für den Ball gibt, entfernen
+        # Wenn es bereits eine Spur für den Ball gibt, entferne diesen
         if self.wagon_spur_index is not None:
             # Graphendaten in Liste konvertieren
             graphen_daten_liste = list(self.bz_fig.data)
             # Entferne Ball-Spur relativ zum Index
             graphen_daten_liste.pop(self.wagon_spur_index)
-            # Aktualisieren des Graphens anhand der Liste
+            # Aktualisieren des Graphen anhand der Liste
             self.bz_fig.data = tuple(graphen_daten_liste)
 
         # Füge die neue Wagon-Spur hinzu
@@ -436,6 +527,9 @@ class BezierkurveGrafiken:
         return self.bz_fig
 
     def hole_infos_bei_t(self, globales_t):
+        """
+        Helperfunktion, zu einem globalen t weitere Informationen (Segment, lokales t, Position, ...) zu berechnen und auszugeben.
+        """
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = self.kurve_berechnung.berechne_position_fuer_globales_t(
             globales_t)
         infos = [
@@ -449,7 +543,11 @@ class BezierkurveGrafiken:
         return infos
 
     def hole_bezierkurve(self):
+        """
+        Berechnen der xyz-Kurvenpunkte der Bézierkurve.
+        """
         t_werte = np.linspace(0, 1, 1000)
+
         kurvenpunkte = self.kurve_berechnung.berechne_gesamte_bezierkurve(t_werte)
         x, y, z = kurvenpunkte[:, 0], kurvenpunkte[:, 1], kurvenpunkte[:, 2]
 
@@ -463,31 +561,32 @@ class BezierFormeln:
 
     Zwecks Übersicht werden die Formel einmal im LaTeX-Format hier aufgelistet (siehe auch dem PDF):
 
-    Krümmung:
-        \( k(t) = \frac{||\dot{\vec{r}}(t) \times \ddot{\vec{r}}(t)||}{||\dot{\vec{r}}(t)||^3} \)
+    ** Formeln **:
+    - Krümmung: \( k(t) = \frac{||\dot{\vec{r}}(t) \times \ddot{\vec{r}}(t)||}{||\dot{\vec{r}}(t)||^3} \)
 
-    Torsion:
+    - Torsion:
         (1) Determinanten: \( \tau(t) = \frac{\text{det}(\dot{\vec{r}}(t), \ddot{\vec{r}}(t), \dddot{\vec{r}}(t))}{||\dot{\vec{r}}(t) \times \ddot{\vec{r}}(t)||^2} \)
         (2) Andere Formel: \( \tau(t) = \frac{(\dot{\vec{r}}(t) \times \ddot{\vec{r}}(t)) \cdot \dddot{\vec{r}}(t)}{||\dot{\vec{r}}(t) \times \ddot{\vec{r}}(t)||^2} \)
 
-    Normen:
+    - Normen:
         Tempo: \( ||\dot{\vec{r}}(t)|| \)
         Geschwindigkeit: \( ||\ddot{\vec{r}}(t)|| \)
         Ruck: \( ||\dddot{\vec{r}}(t)|| \)
 
-    Frenet-Serret (Dreibein):
+    - Frenet-Serret (Dreibein):
         T (Tangentenvektor): \( \vec{T}(t) = \frac{\dot{\vec{r}}(t)}{||\dot{\vec{r}}(t)||} \)
         N (Normalenvektor): \( \vec{N}(t) = \frac{\dot{\vec{r}}(t) \times (\ddot{\vec{r}}(t) \times \dot{\vec{r}}(t))}{||\dot{\vec{r}}(t)|| \times ||\ddot{\vec{r}}(t) \times \dot{\vec{r}}(t)||} \)
         B (Binormalenvektor): \( \vec{B}(t) = \vec{T}(t) \times \vec{N}(t) \)
 
-    Parallelrahmen (Bishop-Rahmen):
+    - Parallelrahmen (Bishop-Rahmen):
         T (Tangentenvektor): \( \vec{T}(t) = \frac{\dot{\vec{r}}(t)}{||\dot{\vec{r}}(t)||} \)
-        N und B: siehe StackExchange Webseite oder im Code (Winkelberechnung)
+        N und B: siehe StackExchange oder im Code (Winkelberechnung)
     """
-    def __init__(self, bezier_curve):
-        self.bezier = bezier_curve
+    def __init__(self, bezierkurve):
+        self.bezier = bezierkurve
 
     def kruemmung(self, t):
+        # Ableitungen holen zu t
         bez1_abl_t, bez2_abl_t, _ = self.bezier.bezier_ableitungen(t)
 
         # Berechnung des Kreuzprodukts
@@ -498,9 +597,9 @@ class BezierFormeln:
         norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
 
         # Berechnung der Krümmung
-        kruemmung = norm_kreuz_prod / (norm_bez1_abl_t ** 3)
+        kappa = norm_kreuz_prod / (norm_bez1_abl_t ** 3)
 
-        return kruemmung
+        return kappa
 
     def torsion_det_formel(self, t):
         """
@@ -520,13 +619,14 @@ class BezierFormeln:
             return 0.0
 
         # Berechnung der Torsion
-        torsion = det_wert / (kreuz_prod_betrag ** 2)
+        tau = det_wert / (kreuz_prod_betrag ** 2)
 
-        return torsion
+        return tau
         """
 
         # Alternative Torsion-Formel zwecks Vergleich zur Determinanten-Formel:
 
+        # Ableitungen holen zu t
         bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
 
         # Berechnung des Kreuzprodukts von bez1_abl_t und bez2_abl_t
@@ -538,37 +638,42 @@ class BezierFormeln:
         # Berechnung des Skalarprodukts von kreuz_prod und bez3_abl_t
         skalar_prod = np.dot(kreuz_prod, bez3_abl_t)
 
-        # Überprüfen, ob der Nenner fast null ist
-        if kreuz_prod_betrag < 1e-10:
-            # Torsion 0, wenn Nenner zu klein sein sollte
-            return 0.0
-
         # Berechnung der Torsion nach der gegebenen Formel
-        torsion = skalar_prod / (kreuz_prod_betrag ** 2)
+        tau = skalar_prod / (kreuz_prod_betrag ** 2)
 
-        return torsion
+        return tau
 
     def normen_der_ableitungen(self, t):
+        # Ableitungen holen zu t
         bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
 
         # Berechnung der Normen
+
+        # Geschwindigkeit
         norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
+
+        # Tempo
         norm_bez2_abl_t = np.linalg.norm(bez2_abl_t)
+
+        # Ruck
         norm_bez3_abl_t = np.linalg.norm(bez3_abl_t)
 
         return norm_bez1_abl_t, norm_bez2_abl_t, norm_bez3_abl_t
 
     def frenet_serret(self, t):
+        # Ableitungen holen zu t
         bez1_abl_t, bez2_abl_t, bez3_abl_t = self.bezier.bezier_ableitungen(t)
 
         # Tangentenvektor (T)
         T = bez1_abl_t / np.linalg.norm(bez1_abl_t)
 
         # Normalenvektor (N)
+        # Orthogonal zum Tangentenvektor
         kreuz_prod = np.cross(bez2_abl_t, bez1_abl_t)
         N = np.cross(bez1_abl_t, kreuz_prod) / (np.linalg.norm(bez1_abl_t) * np.linalg.norm(kreuz_prod))
 
         # Binormalenvektor (B)
+        # Orthogonal zu T und N
         B = np.cross(T, N)
 
         return T, N, B
@@ -582,11 +687,11 @@ class BezierFormeln:
         von der Antwort von Ted Shifrin
 
         Im Gegensatz zum Frenet-Serret (Dreibein) wird hier Wert auf Paralleltransport gelegt,
-        dh. die Torsion wird weitesgehend ignoriert und resultiert nicht in 'komischen' Drehungen innerhalb derBewegung
+        dh. die Torsion wird weitesgehend ignoriert und resultiert nicht in 'komischen' Drehungen innerhalb der Bewegung
         entlang der Bézierkurve sofern eine hohe Torsion auftaucht.
         """
 
-        # Erste und zweite Ableitungen an t berechnen
+        # Ableitungen holen zu t
         bez1_abl_t, bez2_abl_t, _ = self.bezier.bezier_ableitungen(t)
 
         # Tangentenvektor (zeigt in die Richtung relativ zu t)
@@ -616,7 +721,7 @@ class BezierFormeln:
 
 class BezierAnalyse:
     """
-    Analyse-Klasse die entkoppelt zu den obigen Formeln ist.
+    Analyse-Klasse die entkoppelt zu den obigen Berechnungsformeln ist.
 
     Innerhalb dieser Klasse werden alle Methoden zwecks unterschiedlichen Berechnungen definiert, welche auf die
     obigen Formeln basieren und die Berechnungen relativ zum globalen t zurückgeben.
@@ -636,6 +741,7 @@ class BezierAnalyse:
         bezier_formeln = BezierFormeln(bezier_segment)
 
         wert = funktion(bezier_formeln, lokales_t)
+
         return segment_index, lokales_t, position, wert
 
     # Funktionen um Berechnung für bestimmtes globales t zu bestimmen
@@ -672,7 +778,7 @@ class BezierAnalyse:
         segment_index, lokales_t, _, segment_stuetzpunkte, _ = self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(
             globales_t)
 
-        # Verwendung der Kontrollpunkte direkt aus bezier_kurve_berechnung
+        # Verwendung der Kontrollpunkte (direkt aus bezier_kurve_berechnung)
         segment_kontrollpunkte = self.bezier_kurve_berechnung._kontrollpunkte[segment_index]
 
         bezier_segment = KubischeBezier(segment_stuetzpunkte[0], *segment_kontrollpunkte, segment_stuetzpunkte[1])
@@ -693,11 +799,21 @@ class BezierAnalyse:
         return bezier_formeln.paralell_rahmen_bishop(lokales_t)
 
 class BezierVisualisierung:
+    """
+    Klasse für die Plotly-Visualisierung zwecks der Kurvenanalyse.
+
+    Analyse-Grafiken:
+        - Torsion zu t
+        - Krümmung zu t
+        - Normen zu t (Tempo, Geschwindigkeit, Ruck)
+    """
     def __init__(self, bezier_analyse):
         self.bezier_analyse = bezier_analyse
 
     def plotte_torsion(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_torsionswerte(anzahl_punkte)
+
+        # Wert [3]: Ist der vierte Return von berechne_alle_normen (Wert der Torsion)
         torsionswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
@@ -722,6 +838,8 @@ class BezierVisualisierung:
 
     def plotte_kruemmung(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_kruemmungswerte(anzahl_punkte)
+
+        # Wert [3]: Ist der vierte Return von berechne_alle_normen (Wert der Krümmung)
         kruemmungswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
@@ -746,8 +864,10 @@ class BezierVisualisierung:
 
     def plotte_normen(self, t_wert_global, anzahl_punkte=2500):
         werte = self.bezier_analyse.berechne_alle_normen(anzahl_punkte)
+
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
+        # # Wert [3]: Ist der vierte Return von berechne_alle_normen (Wert der Torsion); zweiter Index die Positionierung
         normen_B1_t = [wert[3][0] for wert in werte]
         normen_B2_t = [wert[3][1] for wert in werte]
         normen_B3_t = [wert[3][2] for wert in werte]
@@ -755,9 +875,9 @@ class BezierVisualisierung:
         berechneter_wert = self.bezier_analyse.normen_fuer_globales_t(t_wert_global)[3]
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo (1. Ableitung)'))
-        fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Geschwindigkeit (2. Ableitung)'))
-        fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck (3. Ableitung)'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Geschwindigkeit'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck'))
         fig.add_shape(
             type="line",
             x0=t_wert_global,
@@ -777,33 +897,36 @@ class BezierVisualisierung:
         return fig
 
 class FrenetDreibeinVisualisierung:
+    """
+    Klasse für die Plotly-Visualisierung für Frenet-Serret (Dreibein).
+    """
     def __init__(self, bezier_analyse, bezier_grafiken):
         self.bezier_analyse = bezier_analyse
         self.bezier_grafiken = bezier_grafiken
-        self.vektoren_groesse = 1.0  # Initialwert
+        self.vektoren_groesse = 1.0
         self.alle_positionen, self.alle_T_vektoren, self.alle_N_vektoren, self.alle_B_vektoren = self.berechne_positions_vektoren()
         self.bezier_kurve_berechnung = bezier_kurve_berechnung
 
 
     def berechne_positions_vektoren(self):
         """
-        Berechnet die Positionen und TNB-Vektoren für alle t-Werte von 0 bis 1.
+        Berechnet alle Positionen und TNB-Vektoren für alle t-Werte von 0 bis 1.
 
         Rückgabe:
-            achterbahn_positionen: Ein Array mit den Positionen der Kugel.
-            T_vektoren: Ein Array mit den T-Vektoren.
-            N_vektoren: Ein Array mit den N-Vektoren.
-            B_vektoren: Ein Array mit den B-Vektoren.
+            achterbahn_positionen: Array mit den Positionen der Kugel
+            T_vektoren: Array mit den T-Vektoren
+            N_vektoren: Array mit den N-Vektoren
+            B_vektoren: Array mit den B-Vektoren
         """
 
-        t_values = np.linspace(0, 1, 100)
+        t_werte = np.linspace(0, 1, 100)
 
-        achterbahn_positionen = np.zeros((len(t_values), 3))
-        T_vektoren = np.zeros((len(t_values), 3))
-        N_vektoren = np.zeros((len(t_values), 3))
-        B_vektoren = np.zeros((len(t_values), 3))
+        achterbahn_positionen = np.zeros((len(t_werte), 3))
+        T_vektoren = np.zeros((len(t_werte), 3))
+        N_vektoren = np.zeros((len(t_werte), 3))
+        B_vektoren = np.zeros((len(t_werte), 3))
 
-        for idx, t in enumerate(t_values):
+        for idx, t in enumerate(t_werte):
             # Berechnungen
             _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t, BezierFormeln.frenet_serret)
             T, N, B = self.bezier_analyse.frenet_serret(t)
@@ -882,7 +1005,8 @@ class FrenetDreibeinVisualisierung:
         return fig
 
     def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
-        idx = int(min(t_wert_global, 0.99) * 100)  # Da wir 100 t-Werte haben
+        # Da man 100 t-Werte hat für den t-Slider
+        idx = int(min(t_wert_global, 0.99) * 100)
 
 
         position = self.alle_positionen[idx]
@@ -918,7 +1042,7 @@ class FrenetDreibeinVisualisierung:
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
             self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
 
-        # Hole Dreibein Vektoren
+        # Hole Dreibein TNB-Vektoren
         T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
 
         # Infos
@@ -937,22 +1061,28 @@ class FrenetDreibeinVisualisierung:
         return infos
 
 class ParallelRahmenVisualisierung:
+    """
+    Klasse für die Plotly-Visualisierung für den Parallel-Rahmen (Bishop).
+
+    Info: Selbe Struktur die die Frenet-Serret Klasse.
+    TODO: Refaktorisierung (Basisklasse mit zwei Subklassen für Frenet-Serret (Dreibein) und dem Parallelrahmen)
+    """
     def __init__(self, bezier_analyse, bezier_grafiken):
         self.bezier_analyse = bezier_analyse
         self.bezier_grafiken = bezier_grafiken
-        self.vektoren_groesse = 1.0  # Initialwert
+        self.vektoren_groesse = 1.0
         self.alle_positionen, self.alle_T_vektoren, self.alle_N_vektoren, self.alle_B_vektoren = self.berechne_positions_vektoren()
         self.bezier_kurve_berechnung = bezier_kurve_berechnung
 
     def berechne_positions_vektoren(self):
-        t_values = np.linspace(0, 1, 100)
+        t_werte = np.linspace(0, 1, 100)
 
-        achterbahn_positionen = np.zeros((len(t_values), 3))
-        T_vektoren = np.zeros((len(t_values), 3))
-        N_vektoren = np.zeros((len(t_values), 3))
-        B_vektoren = np.zeros((len(t_values), 3))
+        achterbahn_positionen = np.zeros((len(t_werte), 3))
+        T_vektoren = np.zeros((len(t_werte), 3))
+        N_vektoren = np.zeros((len(t_werte), 3))
+        B_vektoren = np.zeros((len(t_werte), 3))
 
-        for idx, t in enumerate(t_values):
+        for idx, t in enumerate(t_werte):
             _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t, BezierFormeln.paralell_rahmen_bishop)
             T, N, B = self.bezier_analyse.paralell_rahmen_bishop(t)
 
@@ -981,6 +1111,8 @@ class ParallelRahmenVisualisierung:
             fig.add_trace(go.Scatter3d(x=[position[0], position[0] + vector[0]], y=[position[1], position[1] + vector[1]], z=[position[2], position[2] + vector[2]], mode='lines', line=dict(color=color, width=6), name=name))
 
         fig.update_layout(title=f"Parallel-Rahmen (Bishop) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+
+        # In return fig ändern, wenn in Dash statt Plotly
         fig.show()
 
     def initialisiere_grafik(self):
@@ -1010,8 +1142,11 @@ class ParallelRahmenVisualisierung:
         return fig
 
     def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
+        # Da man 100 t-Werte hat für den t-Slider (ansonsten Fehler bei t=1)
         idx = int(min(t_wert_global, 0.99) * 100)
+
         position = self.alle_positionen[idx]
+
         T = self.alle_T_vektoren[idx] * self.vektoren_groesse
         N = self.alle_N_vektoren[idx] * self.vektoren_groesse
         B = self.alle_B_vektoren[idx] * self.vektoren_groesse
@@ -1044,7 +1179,7 @@ class ParallelRahmenVisualisierung:
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
             self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
 
-        # Hole Paralellrahmen Vektoren
+        # Hole Paralellrahmen TNB-Vektoren
         T, N, B = self.bezier_analyse.paralell_rahmen_bishop(t_wert_global)
 
         # Infos
@@ -1064,8 +1199,8 @@ class ParallelRahmenVisualisierung:
 
 class TorusKnoten:
     """
-    Berechnung von Torusknoten für kubische Bezierkurven unter Berücksichtigung
-    der Skalierung von t-Werten im Bereich t=0 bis t=1 auf 0 bis 2pi und realisiert die Konvertierung von Torus-Koordinaten
+    Berechnung von Torusknoten für kubische Bezierkurven unter Berücksichtigung der Skalierung  von t-Werten
+    im Bereich t=0 bis t=1 auf 0 bis 2pi und realisiert die Konvertierung von Torus-Koordinaten
     in kartesische Koordinaten.
     """
     def __init__(self, R=5, r=2, p=2, q=3):
@@ -1082,7 +1217,7 @@ class TorusKnoten:
         Berechnet die Koordinaten des Torusknotens für einen t-Wert.
         Hier skaliert t (0 bis 1) auf 0 bis 2pi.
         """
-        # Mappen vom t-Wert zu 0 bis 2pi
+        # Mappen vom t-Wert Parameter zu 0 bis 2pi
         theta = 2 * np.pi * t
 
         # XY Projektion in der Ebene
@@ -1093,7 +1228,7 @@ class TorusKnoten:
 
         return x, y, z
 
-    def speichere_knotenpunkte(self, filename="torus.txt", anzahl=100):
+    def speichere_knotenpunkte(self, filename="torus.csv", anzahl=100):
         """
         Berechnet die Koordinaten des Torusknotens für eine definierte Anzahl von Punkten + speichert diese in Datei.
         ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torus.txt
@@ -1113,22 +1248,18 @@ class TorusKnoten:
 if __name__ == "__main__":
 
     # Stützpunkte definieren
-    UNTERORDNER_STRECKEN = "strecken"
-    #STRECKE = "_DizzyButterfly.trk"
-    STRECKE = 'torus.csv'
+    # (KONFIGURATION DER STRECKE IM HEADER)
 
     # Einlesen der Stützpunkte
     stuetzpunkte = LeseDatei().trackpunkte_einlesen(f"{UNTERORDNER_STRECKEN}/{STRECKE}")
 
-    # BezierKurveBerechnung Instanz
+    # Instanz BezierKurveBerechnung
     bezier_kurve_berechnung = BezierKurveBerechnung(stuetzpunkte)
 
     # Kontrollpunkte berechnen
     kontrollpunkte, _, _ = bezier_kurve_berechnung.berechne_kontrollpunkte()
 
-    # Bezierkurve an den Punkt t anzeigen (Startpunkte für die Visualisierungen)
-    t_wert_global = 0.5
-    t_wert_frenet_parallel = 0.0
+    # ---- ---- --- ----
 
     # Grafiken und Analyse initialisieren
     grafiken = BezierkurveGrafiken(stuetzpunkte)
@@ -1145,7 +1276,7 @@ if __name__ == "__main__":
     # Dateiname für Darstellung
     dateiname_ohne_endung = STRECKE.split('.')[0]
 
-    # Konfiguration der Dash-App
+    # Konfiguration von Dash
     app = dash.Dash(__name__)
     app.title = "MMCG (2023)"
 
@@ -1156,13 +1287,13 @@ if __name__ == "__main__":
             html.Strong("Eingelesene Datei:"),
             f" {dateiname_ohne_endung}"
         ], style={'textAlign': 'center'}),
-        # Wagen auf der Bezierkurve anzeigen
+        # Wagon auf der Bezierkurve anzeigen
         html.H2("Bézierkurve mit Wagon", style={'textAlign': 'center'}),
         html.Div([
             #html.H2("Wagen auf der Bézierkurve"),
             dcc.Graph(id='wagon-graph', figure=grafiken.plotte_wagon_bei_t(t_wert_global))
         ]),
-        # Globaler t-Wert-Slider und Diagrammauswahl
+        # Globaler t-Wert-Slider und Diagrammselektion
         html.H2("t-Wert anpassen:", style={'textAlign': 'center'}),
         html.Div([
             html.Label("Globales t für Wagenposition und Analyse:", style={'textAlign': 'center'}),
@@ -1177,6 +1308,7 @@ if __name__ == "__main__":
             html.H2("Krümmung, Torsion und Normen", style={'textAlign': 'center'}),
             html.Div([
                 html.Label("Wählen die Grafiken zur Darstellung aus:", style={'textAlign': 'center'}),
+                html.Br(),
                 dcc.Checklist(
                     id='graph-checklist',
                     options=[
@@ -1187,7 +1319,7 @@ if __name__ == "__main__":
                     value=['torsion', 'kruemmung', 'normen'],
                     inline=True
                 )
-            ], style={'textAlign': 'center'}),  # Diese Zeile wurde geändert
+            ], style={'textAlign': 'center'}),
         ]),
         # Analyse-Grafiken
         html.Div([
@@ -1195,6 +1327,7 @@ if __name__ == "__main__":
             dcc.Graph(id='torsion-graph'),
             dcc.Graph(id='normen-graph')
         ]),
+        html.Hr(),
         # Für das Frenet-Dreibein
         html.Div([
             html.H2("Frenet-Serret (Dreibein) Rahmen", style={'textAlign': 'center'}),
@@ -1213,7 +1346,7 @@ if __name__ == "__main__":
                      style={'textAlign': 'center', 'padding': '10px', 'background-color': '#f9f9f9',
                             'margin': '10px', 'border-radius': '5px'})
         ]),
-        html.Br(),
+        html.Hr(),
         # Für den Parallel-Rahmen
         html.Div([
             html.H2("Parallel-Rahmen (Bishop)", style={'textAlign': 'center'}),
@@ -1305,4 +1438,4 @@ if __name__ == "__main__":
     #torus_knoten = TorusKnoten()
 
     # Speichere Torus
-    #torus_knoten.speichere_knotenpunkte(filename="torus.txt", anzahl=100)
+    #torus_knoten.speichere_knotenpunkte(filename="torus.csv", anzahl=100)
