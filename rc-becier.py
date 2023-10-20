@@ -380,12 +380,11 @@ class BezierKurveBerechnung:
           Um herauszufinden, in welchem Segment der Punkt zum globalen t liegt, wird das globale t mit der Anzahl
           der Stützpunkte multipliziert -> Skalierung auf die Anzahl der Stützpunkte.
           Es wird -1 subtrahiert, um auf die Anzahl der Segmente zu skalieren (da Anzahl n Stützstellen = Anzahl Segmente n-1).
-          Durch int()-Abrunden wird der ganzzahlige Index bestimmt, in dem sich der Punkt befindet.
+          Durch int-Abrunden wird der ganzzahlige Index bestimmt, in dem sich der Punkt befindet.
 
         - Lokales t für das Segment:
           Globales t nutzen, um die Position (lokales t) innerhalb des bestimmten Segments zu finden.
-          Gleiche Skalierung wie beim Segment-Index; allerdings wird der aktuelle Index des Segments abgezogen, um
-          von der Segment-Indexierung
+          Gleiche Skalierung wie beim Segment-Index; allerdings wird der aktuelle Index des Segments abgezogen, um lokales t zu bestimmen.
 
 
         Parameter:
@@ -413,6 +412,7 @@ class BezierKurveBerechnung:
         lokales_t_segment = globales_t * (len(self.stuetzpunkte) - 1) - segment_idx
 
         # Instanz der KubischeBezier Klasse (für das aktuelle Segment)
+        # % len zwecks Fehlerbeseitigung (wenn Ende der Bezierkurve erreicht wurde; t=1)
         bezier_segment = KubischeBezier(self.stuetzpunkte[segment_idx], *kontrollpunkte[segment_idx],
                                         self.stuetzpunkte[(segment_idx + 1) % len(self.stuetzpunkte)])
 
