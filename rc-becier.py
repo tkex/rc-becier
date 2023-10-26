@@ -313,12 +313,12 @@ class BezierKurveBerechnung:
         Gibt die Matrix A und den Vektor rhs (textuell) aus.
         """
         print("\nMatrix A:")
-        for row in A:
-            print(' '.join(map(str, row)))
+        for zeile in A:
+            print(' '.join(map(str, zeile)))
 
         print("\nVektor rhs:")
-        for row in rhs:
-            print(row)
+        for zeile in rhs:
+            print(zeile)
 
     def ausgabe_stuetz_und_kontrollpunkte(self):
         """
@@ -423,7 +423,7 @@ class BezierKurveBerechnung:
         segment_stuetzpunkte = (
             self.stuetzpunkte[segment_idx], self.stuetzpunkte[(segment_idx + 1) % len(self.stuetzpunkte)])
 
-        # Kontrollpunkte für das Segment ai, bi
+        # Kontrollpunkte für das Segment
         segment_kontrollpunkte = kontrollpunkte[segment_idx]
 
         return segment_idx, lokales_t_segment, segment_kontrollpunkte, segment_stuetzpunkte, position
@@ -676,10 +676,10 @@ class BezierFormeln:
 
         # Berechnung der Normen
 
-        # Geschwindigkeit
+        # Tempo
         norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
 
-        # Tempo
+        # Krümmung
         norm_bez2_abl_t = np.linalg.norm(bez2_abl_t)
 
         # Ruck
@@ -861,7 +861,7 @@ class BezierVisualisierung:
     Analyse-Grafiken:
         - Torsion zu t
         - Krümmung zu t
-        - Normen zu t (Tempo, Geschwindigkeit, Ruck)
+        - Normen zu t (Tempo, Beschleunigung, Ruck)
     """
 
     def __init__(self, bezier_analyse):
@@ -933,7 +933,7 @@ class BezierVisualisierung:
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo'))
-        fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Geschwindigkeit'))
+        fig.add_trace(go.Scatter(x=t_werte, y=normen_B2_t, mode='lines', name='Beschleunigung'))
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck'))
         fig.add_shape(
             type="line",
@@ -946,7 +946,7 @@ class BezierVisualisierung:
         fig.update_layout(
             title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>"
                   f"Berechneter Wert der Normen an Stelle t = {t_wert_global:.2f} ist für "
-                  f"Tempo: {berechneter_wert[0]:.2f}, Geschwindigkeit: {berechneter_wert[1]:.2f} und Ruck: {berechneter_wert[2]:.2f}",
+                  f"Tempo: {berechneter_wert[0]:.2f}, Beschleunigung: {berechneter_wert[1]:.2f} und Ruck: {berechneter_wert[2]:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Normen der Beträge"
         )
@@ -1305,7 +1305,7 @@ class TorusKnoten:
     def speichere_knotenpunkte(self, filename="torus.csv", anzahl=100):
         """
         Berechnet die Koordinaten des Torusknotens für eine definierte Anzahl von Punkten + speichert diese in Datei.
-        ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torus.txt
+        ACHTUNG: Mehrmals speichert resultiert in der Überschreibung von torus.csv
         """
         # Anzahl der einzelnen Punkte zwischen t=0 und t=1
         t_werte = np.linspace(0, 1, anzahl)
