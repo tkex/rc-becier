@@ -22,14 +22,14 @@ STRECKE = 'tobiko_2023_torus.csv'
 
 # ** Startpunkte der Visualisierungen **
 # Bezierkurve und Diagramme an globalen Punkt t anzeigen
-t_wert_global = 0.5
+T_WERT_GLOBAL = 0.5
 # Frenet-Serret und Parallelrahmen (Bishop) an globalen Punkt t anzeigen
-t_wert_frenet_parallel = 0.0
+T_WERT_FRENET_PARALLEL = 0.0
 
 # ** Auflösung der Grafiken **
 # Achtung: Die Umstellung auf einen geringen Wert kann dazu führen, dass der berechnete Wert leicht von der visuellen Darstellung abweicht.
 # Je höher, desto präziser die Grafik (da mehr Punkte zwischen dem t-Intervall 0 und 1 berechnet werden)
-AUFLOESUNG_GRAFIK = 2500  # Standard 2500
+AUFLOESUNG_GRAFIK = 2500  # Standard 2500; 10000 hoch
 
 
 class LeseDatei:
@@ -867,59 +867,59 @@ class BezierVisualisierung:
     def __init__(self, bezier_analyse):
         self.bezier_analyse = bezier_analyse
 
-    def plotte_torsion(self, t_wert_global, anzahl_punkte=AUFLOESUNG_GRAFIK):
+    def plotte_torsion(self, T_WERT_GLOBAL, anzahl_punkte=AUFLOESUNG_GRAFIK):
         werte = self.bezier_analyse.berechne_alle_torsionswerte(anzahl_punkte)
 
         # Wert [3]: Ist der vierte Return von berechne_alle_normen (Wert der Torsion)
         torsionswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
-        berechneter_wert = self.bezier_analyse.torsion_fuer_globales_t(t_wert_global)[3]
+        berechneter_wert = self.bezier_analyse.torsion_fuer_globales_t(T_WERT_GLOBAL)[3]
 
         fig = go.Figure(data=go.Scatter(x=t_werte, y=torsionswerte, mode='lines', line=dict(color='blue')))
         fig.add_shape(
             type="line",
-            x0=t_wert_global,
-            x1=t_wert_global,
+            x0=T_WERT_GLOBAL,
+            x1=T_WERT_GLOBAL,
             y0=min(torsionswerte),
             y1=max(torsionswerte),
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Torsion der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Torsion an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.2f}",
+            title=f"Torsion der gesamten Bézierkurve (t = {T_WERT_GLOBAL:.2f})<br>Berechneter Wert der Torsion an Stelle t = {T_WERT_GLOBAL:.2f} ist {berechneter_wert:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Torsion τ(t)"
         )
 
         return fig
 
-    def plotte_kruemmung(self, t_wert_global, anzahl_punkte=AUFLOESUNG_GRAFIK):
+    def plotte_kruemmung(self, T_WERT_GLOBAL, anzahl_punkte=AUFLOESUNG_GRAFIK):
         werte = self.bezier_analyse.berechne_alle_kruemmungswerte(anzahl_punkte)
 
         # Wert [3]: Ist der vierte Return von berechne_alle_normen (Wert der Krümmung)
         kruemmungswerte = [wert[3] for wert in werte]
         t_werte = np.linspace(0, 1, anzahl_punkte)
 
-        berechneter_wert = self.bezier_analyse.kruemmung_fuer_globales_t(t_wert_global)[3]
+        berechneter_wert = self.bezier_analyse.kruemmung_fuer_globales_t(T_WERT_GLOBAL)[3]
 
         fig = go.Figure(data=go.Scatter(x=t_werte, y=kruemmungswerte, mode='lines', line=dict(color='red')))
         fig.add_shape(
             type="line",
-            x0=t_wert_global,
-            x1=t_wert_global,
+            x0=T_WERT_GLOBAL,
+            x1=T_WERT_GLOBAL,
             y0=min(kruemmungswerte),
             y1=max(kruemmungswerte),
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Krümmung der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>Berechneter Wert der Krümmung an Stelle t = {t_wert_global:.2f} ist {berechneter_wert:.2f}",
+            title=f"Krümmung der gesamten Bézierkurve (t = {T_WERT_GLOBAL:.2f})<br>Berechneter Wert der Krümmung an Stelle t = {T_WERT_GLOBAL:.2f} ist {berechneter_wert:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Krümmung κ(t)"
         )
 
         return fig
 
-    def plotte_normen(self, t_wert_global, anzahl_punkte=AUFLOESUNG_GRAFIK):
+    def plotte_normen(self, T_WERT_GLOBAL, anzahl_punkte=AUFLOESUNG_GRAFIK):
         werte = self.bezier_analyse.berechne_alle_normen(anzahl_punkte)
 
         t_werte = np.linspace(0, 1, anzahl_punkte)
@@ -929,7 +929,7 @@ class BezierVisualisierung:
         normen_B2_t = [wert[3][1] for wert in werte]
         normen_B3_t = [wert[3][2] for wert in werte]
 
-        berechneter_wert = self.bezier_analyse.normen_fuer_globales_t(t_wert_global)[3]
+        berechneter_wert = self.bezier_analyse.normen_fuer_globales_t(T_WERT_GLOBAL)[3]
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B1_t, mode='lines', name='Tempo'))
@@ -937,15 +937,15 @@ class BezierVisualisierung:
         fig.add_trace(go.Scatter(x=t_werte, y=normen_B3_t, mode='lines', name='Ruck'))
         fig.add_shape(
             type="line",
-            x0=t_wert_global,
-            x1=t_wert_global,
+            x0=T_WERT_GLOBAL,
+            x1=T_WERT_GLOBAL,
             y0=0,
             y1=max(max(normen_B1_t), max(normen_B2_t), max(normen_B3_t)),
             line=dict(color="green", width=2)
         )
         fig.update_layout(
-            title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {t_wert_global:.2f})<br>"
-                  f"Berechneter Wert der Normen an Stelle t = {t_wert_global:.2f} ist für "
+            title=f"Normen der Ableitungen der gesamten Bézierkurve (t = {T_WERT_GLOBAL:.2f})<br>"
+                  f"Berechneter Wert der Normen an Stelle t = {T_WERT_GLOBAL:.2f} ist für "
                   f"Tempo: {berechneter_wert[0]:.2f}, Beschleunigung: {berechneter_wert[1]:.2f} und Ruck: {berechneter_wert[2]:.2f}",
             xaxis=dict(title="Globales t", tickvals=list(np.arange(0, 1.1, 0.1))),
             yaxis_title="Normen der Beträge"
@@ -996,10 +996,10 @@ class FrenetDreibeinVisualisierung:
 
         return achterbahn_positionen, T_vektoren, N_vektoren, B_vektoren
 
-    def plotte_wagon_und_tnb_statisch(self, t_wert_global):
+    def plotte_wagon_und_tnb_statisch(self, T_WERT_GLOBAL):
         # Position und TNB-Vektoren für gegebenes t berechnen
-        _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(t_wert_global, BezierFormeln.frenet_serret)
-        T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
+        _, _, position, _ = self.bezier_analyse.berechne_fuer_globales_t(T_WERT_GLOBAL, BezierFormeln.frenet_serret)
+        T, N, B = self.bezier_analyse.frenet_serret(T_WERT_GLOBAL)
 
         # Skalierung der TNB Vektoren
         T *= self.vektoren_groesse
@@ -1031,7 +1031,7 @@ class FrenetDreibeinVisualisierung:
                 name=name
             ))
 
-        fig.update_layout(title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.update_layout(title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {T_WERT_GLOBAL:.2f}")
 
         fig.show()
 
@@ -1063,9 +1063,9 @@ class FrenetDreibeinVisualisierung:
 
         return fig
 
-    def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
+    def aktualisiere_grafik(self, fig, T_WERT_GLOBAL, zeige_details=True):
         # Da man 100 t-Werte hat für den t-Slider
-        idx = int(min(t_wert_global, 0.99) * 100)
+        idx = int(min(T_WERT_GLOBAL, 0.99) * 100)
 
         position = self.alle_positionen[idx]
         T = self.alle_T_vektoren[idx] * self.vektoren_groesse
@@ -1084,7 +1084,7 @@ class FrenetDreibeinVisualisierung:
             fig.data[i + 2].z = [position[2], position[2] + vector[2]]
 
         fig.update_layout(
-            title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
+            title=f"Frenet-Serret (Dreibein) mit den T, N und B Vektoren bei t = {T_WERT_GLOBAL:.2f}",
             scene=dict(
                 xaxis=dict(showbackground=zeige_details, title_text="x" if zeige_details else "",
                            showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
@@ -1097,18 +1097,18 @@ class FrenetDreibeinVisualisierung:
 
         return fig
 
-    def hole_infos_und_frenet_vektoren_bei_t(self, t_wert_global):
+    def hole_infos_und_frenet_vektoren_bei_t(self, T_WERT_GLOBAL):
 
         # Hole Grundinfos
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
-            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
+            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(T_WERT_GLOBAL)
 
         # Hole Dreibein TNB-Vektoren
-        T, N, B = self.bezier_analyse.frenet_serret(t_wert_global)
+        T, N, B = self.bezier_analyse.frenet_serret(T_WERT_GLOBAL)
 
         # Infos
         infos = {
-            'Globales t': t_wert_global,
+            'Globales t': T_WERT_GLOBAL,
             'Bézierkurve-Segment Index': segment_index,
             'Lokales t': lokales_t,
             'Position auf der Bézierkurve': position,
@@ -1156,8 +1156,8 @@ class ParallelRahmenVisualisierung:
 
         return achterbahn_positionen, T_vektoren, N_vektoren, B_vektoren
 
-    def plotte_wagon_und_tnb_statisch(self, t_wert_global):
-        idx = int(min(t_wert_global, 0.99) * 100)
+    def plotte_wagon_und_tnb_statisch(self, T_WERT_GLOBAL):
+        idx = int(min(T_WERT_GLOBAL, 0.99) * 100)
         position = self.alle_positionen[idx]
         T = self.alle_T_vektoren[idx] * self.vektoren_groesse
         N = self.alle_N_vektoren[idx] * self.vektoren_groesse
@@ -1179,7 +1179,7 @@ class ParallelRahmenVisualisierung:
                              z=[position[2], position[2] + vector[2]], mode='lines', line=dict(color=color, width=6),
                              name=name))
 
-        fig.update_layout(title=f"Parallel-Rahmen (Bishop) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}")
+        fig.update_layout(title=f"Parallel-Rahmen (Bishop) mit den T, N und B Vektoren bei t = {T_WERT_GLOBAL:.2f}")
 
         # In return fig ändern, wenn in Dash statt Plotly
         fig.show()
@@ -1210,9 +1210,9 @@ class ParallelRahmenVisualisierung:
 
         return fig
 
-    def aktualisiere_grafik(self, fig, t_wert_global, zeige_details=True):
+    def aktualisiere_grafik(self, fig, T_WERT_GLOBAL, zeige_details=True):
         # Da man 100 t-Werte hat für den t-Slider (ansonsten Fehler bei t=1)
-        idx = int(min(t_wert_global, 0.99) * 100)
+        idx = int(min(T_WERT_GLOBAL, 0.99) * 100)
 
         position = self.alle_positionen[idx]
 
@@ -1232,7 +1232,7 @@ class ParallelRahmenVisualisierung:
             fig.data[i + 2].z = [position[2], position[2] + vector[2]]
 
         fig.update_layout(
-            title=f"Parallel-Rahmen (Bishop) mit den T, N und B Vektoren bei t = {t_wert_global:.2f}",
+            title=f"Parallel-Rahmen (Bishop) mit den T, N und B Vektoren bei t = {T_WERT_GLOBAL:.2f}",
             scene=dict(
                 xaxis=dict(showbackground=zeige_details, title_text="x" if zeige_details else "",
                            showgrid=zeige_details, zeroline=zeige_details, showticklabels=zeige_details),
@@ -1245,18 +1245,18 @@ class ParallelRahmenVisualisierung:
 
         return fig
 
-    def hole_infos_und_bishop_vektoren_bei_t(self, t_wert_global):
+    def hole_infos_und_bishop_vektoren_bei_t(self, T_WERT_GLOBAL):
 
         # Hole Grundinfos
         segment_index, lokales_t, segment_kontrollpunkte, segment_stuetzpunkte, position = \
-            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(t_wert_global)
+            self.bezier_kurve_berechnung.berechne_position_fuer_globales_t(T_WERT_GLOBAL)
 
         # Hole Paralellrahmen TNB-Vektoren
-        T, N, B = self.bezier_analyse.paralell_rahmen_bishop(t_wert_global)
+        T, N, B = self.bezier_analyse.paralell_rahmen_bishop(T_WERT_GLOBAL)
 
         # Infos
         infos = {
-            'Globales t': t_wert_global,
+            'Globales t': T_WERT_GLOBAL,
             'Bézierkurve-Segment Index': segment_index,
             'Lokales t': lokales_t,
             'Position auf der Bezierkurve': position,
@@ -1365,7 +1365,7 @@ if __name__ == "__main__":
         html.H2("Bézierkurve mit Wagon", style={'textAlign': 'center'}),
         html.Div([
             # html.H2("Wagon auf der Bézierkurve"),
-            dcc.Graph(id='wagon-graph', figure=grafiken.plotte_wagon_bei_t(t_wert_global))
+            dcc.Graph(id='wagon-graph', figure=grafiken.plotte_wagon_bei_t(T_WERT_GLOBAL))
         ]),
         # Globaler t-Wert-Slider und Diagrammselektion
         html.H2("t-Wert anpassen:", style={'textAlign': 'center'}),
@@ -1411,7 +1411,7 @@ if __name__ == "__main__":
                 id='frenet-slider',
                 min=0,
                 max=1,
-                value=t_wert_frenet_parallel,
+                value=T_WERT_FRENET_PARALLEL,
                 marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
                 step=0.01,
                 updatemode='drag'
@@ -1430,7 +1430,7 @@ if __name__ == "__main__":
                 id='bishop-slider',
                 min=0,
                 max=1,
-                value=t_wert_frenet_parallel,
+                value=T_WERT_FRENET_PARALLEL,
                 marks={i / 100: str(i / 100) for i in range(0, 101, 5)},
                 step=0.01,
                 updatemode='drag'
