@@ -98,13 +98,13 @@ class LeseDatei:
 
 
 class KubischeBezier:
-    '''
+    """
     Klasse für die Formeln der kubischen Bézierkurven (R^3).
 
     Manuelle Berechnung der kubischen Bézierkurve für t und die (manuell) berechneten Ableitungen.
 
     TODO: Eventuell mittels SymPy zwecks Vereinfachung refaktorisieren.
-    '''
+    """
 
     def __init__(self, x0, x1, x2, x3):
         """
@@ -589,7 +589,7 @@ class BezierFormeln:
 
     - Normen:
         Tempo: \( ||\dot{\vec{r}}(t)|| \)
-        Geschwindigkeit: \( ||\ddot{\vec{r}}(t)|| \)
+        Beschleunigung: \( ||\ddot{\vec{r}}(t)|| \)
         Ruck: \( ||\dddot{\vec{r}}(t)|| \)
 
     - Frenet-Serret (Dreibein):
@@ -679,7 +679,7 @@ class BezierFormeln:
         # Tempo
         norm_bez1_abl_t = np.linalg.norm(bez1_abl_t)
 
-        # Krümmung
+        # Beschleunigung
         norm_bez2_abl_t = np.linalg.norm(bez2_abl_t)
 
         # Ruck
@@ -688,7 +688,7 @@ class BezierFormeln:
         return norm_bez1_abl_t, norm_bez2_abl_t, norm_bez3_abl_t
 
     def frenet_serret(self, t):
-        '''
+        """
         # Ausprobiert Formel nach englischen Wikipedia (https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas#Other_expressions_of_the_frame)
         # Dort findet eine andere Reihenfolge statt
         # Liefert dasselbe Ergebnis (!) wie die untere Implementierung; wenn zunächst erst B berechnet und dann N als Kreuzprodukt von T und B berechnet wird
@@ -709,7 +709,7 @@ class BezierFormeln:
         B = np.cross(T, N)
 
         return T, N, B
-        '''
+        """
 
         # WICHTIG! Liefert denselben orthogonalen Rahmen wie die obige Formel!
         # Formel nach Quelle im Klassen-Header
